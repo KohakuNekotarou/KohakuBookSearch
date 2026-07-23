@@ -63,6 +63,7 @@
 #include "KBSBookScope.h"
 #include "KBSResultModel.h"
 #include "KBSResultTree.h"		// grow the tree / status chapter by chapter as the search runs
+#include "KBSOversetLocator.h"	// the "+" page for an overset hit (locator + sort key)
 
 namespace
 {
@@ -87,11 +88,38 @@ bool HasFindQuery()
 	return !findText.empty();
 }
 
-// The page a match position sits on, named the way the Pages panel names it (section prefix
-// and all). Ported from KESCL's GetMatchPageString: position -> parcel -> frame -> page. Returns
-// false for an overset position (composed but placed in no frame, so no page) and for the query
-// failures around it, which read the same to the user: no page to name. outPageIndex is the
-// page's plain document order (for sorting; the STRING can be "iv" / "A-1" under a section).
+// A frame UID -> its page, named the way the Pages panel names it (section prefix and all). Shared
+// by the visible-match path (the match's own frame) and the overset path (the "+" indicator's
+// frame). false if the frame has no owner page or the page has no name. outPageIndex is the page's
+// plain document order (for sorting; the STRING can be "iv" / "A-1" under a section).
+bool GetFramePageString(const UIDRef& docRef, UID frameUID, PMString& outPage, int32& outPageIndex)
+{
+	outPage.Clear();
+	outPage.SetTranslatable(kFalse);
+	outPageIndex = -1;
+	if (frameUID == kInvalidUID)
+		return false;
+
+	InterfacePtr<IHierarchy> frameHier(docRef.GetDataBase(), frameUID, UseDefaultIID());
+	if (frameHier == nil)
+		return false;
+	const UID pageUID = Utils<ILayoutUtils>()->GetOwnerPageUID(frameHier);
+	if (pageUID == kInvalidUID)
+		return false;
+
+	InterfacePtr<IPageList> pageList(docRef, UseDefaultIID());
+	if (pageList == nil)
+		return false;
+	pageList->GetPageString(pageUID, &outPage);	// defaults: section-aware, abbreviated
+	outPage.SetTranslatable(kFalse);
+	outPageIndex = pageList->GetPageIndex(pageUID);
+	return !outPage.IsEmpty();
+}
+
+// The page a visible match position sits on. Ported from KESCL: position -> parcel -> frame, then
+// GetFramePageString. Returns false for an overset position (composed but placed in no frame) and
+// the query failures around it, which read the same to the user: no page for the match itself. The
+// caller then names the "+" locator's page instead.
 bool GetMatchPageString(const UIDRef& docRef, const UIDRef& storyRef, TextIndex pos,
 	PMString& outPage, int32& outPageIndex)
 {
@@ -115,20 +143,7 @@ bool GetMatchPageString(const UIDRef& docRef, const UIDRef& storyRef, TextIndex 
 	if (frameUID == kInvalidUID)
 		return false;	// overset: composed but placed in no frame
 
-	InterfacePtr<IHierarchy> frameHier(docRef.GetDataBase(), frameUID, UseDefaultIID());
-	if (frameHier == nil)
-		return false;
-	const UID pageUID = Utils<ILayoutUtils>()->GetOwnerPageUID(frameHier);
-	if (pageUID == kInvalidUID)
-		return false;
-
-	InterfacePtr<IPageList> pageList(docRef, UseDefaultIID());
-	if (pageList == nil)
-		return false;
-	pageList->GetPageString(pageUID, &outPage);	// defaults: section-aware, abbreviated
-	outPage.SetTranslatable(kFalse);
-	outPageIndex = pageList->GetPageIndex(pageUID);
-	return !outPage.IsEmpty();
+	return GetFramePageString(docRef, frameUID, outPage, outPageIndex);
 }
 
 // Fill a hit from one match (story, [start, end)): its jump anchors, and the containing
@@ -139,13 +154,20 @@ void BuildHit(const UIDRef& docRef, const UIDRef& storyRef, TextIndex start, Tex
 	outHit.textStart = start;
 	outHit.textEnd = end;
 
-	// The page this match sits on (for the "P<page>(<n>) " hit-row locator). Empty page /
-	// pageIndex -1 marks an overset match. Recomposes on demand - fine, the caller's dirty guard
-	// is up.
+	// The page this match sits on (for the "P<page>(<n>) " hit-row locator). Recomposes on demand -
+	// fine, the caller's dirty guard is up. When the match is overset (no page of its own), name the
+	// page of the "+" overset indicator instead (the last placed parcel's frame, climbing out of a
+	// pushed-out table) so the hit lists as "ovP<page>(n)" and sorts into that page. If nothing is
+	// placed anywhere, leave it pageless (locator falls back to a bare "ov", sorted to the end).
 	if (!GetMatchPageString(docRef, storyRef, start, outHit.pageString, outHit.pageIndex))
 	{
-		outHit.pageString.Clear();
-		outHit.pageIndex = -1;
+		outHit.isOverset = true;
+		const KBSOversetLoc loc = KBSFindOversetLocator(storyRef, start);
+		if (!loc.found || !GetFramePageString(docRef, loc.frameUID, outHit.pageString, outHit.pageIndex))
+		{
+			outHit.pageString.Clear();
+			outHit.pageIndex = -1;
+		}
 	}
 
 	InterfacePtr<ITextModel> model(storyRef, UseDefaultIID());
@@ -325,10 +347,12 @@ void FinalizeChapterHits(std::vector<KBSResultModel::Hit>& hits)
 			locator.SetTranslatable(kFalse);
 			if (hits[k].pageString.IsEmpty())
 			{
-				locator.Append("ov");	// overset: no page (lowercase, as in KESCL)
+				locator.Append("ov");	// overset with nothing placed anywhere: no page to name
 			}
 			else
 			{
+				// An overset hit carries the "+" indicator's page and sorts by it; a trailing
+				// "ov" (after the page and ordinal) marks it as overset -> e.g. "P1(2)ov".
 				locator.Append("P");
 				locator.Append(hits[k].pageString);
 				if (runCount > 1)
@@ -338,6 +362,8 @@ void FinalizeChapterHits(std::vector<KBSResultModel::Hit>& hits)
 					locator.AppendNumber(ordinal);
 					locator.Append(")");
 				}
+				if (hits[k].isOverset)
+					locator.Append("ov");
 			}
 			// The locator is its own part now (drawn at full colour, then a tab stop before the
 			// line text) - the colour cell keeps it separate from the faded line segments.

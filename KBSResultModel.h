@@ -43,14 +43,17 @@ namespace KBSResultModel
 		PMString	matchText;	// the matched text (drawn at full text colour)
 		PMString	postText;	// the line's text after the match
 
-		PMString	pageString;	// the match's page, Pages-panel style ("" = overset, no page)
-		int32		pageIndex;	// the page's document order (-1 = overset); sorts hits into page order
+		PMString	pageString;	// the page named in the locator, Pages-panel style. For a visible
+								// match: its own page. For an overset match: the page of the "+"
+								// indicator (or "" when nothing is placed anywhere).
+		int32		pageIndex;	// that page's document order (-1 = no page); sorts hits into page order
+		bool		isOverset;	// match is overset -> the locator gets an "ov" prefix ("ovP<page>")
 
 		UID			storyUID;	// the story the match lives in (within its chapter's database)
 		TextIndex	textStart;	// the match's start position in that story
 		TextIndex	textEnd;	// the match's end position (Task 3 marker rectangle)
 
-		Hit() : pageIndex(-1), storyUID(kInvalidUID), textStart(kInvalidTextIndex), textEnd(kInvalidTextIndex) {}
+		Hit() : pageIndex(-1), isOverset(false), storyUID(kInvalidUID), textStart(kInvalidTextIndex), textEnd(kInvalidTextIndex) {}
 	};
 
 	/** One chapter that holds at least one hit. */
