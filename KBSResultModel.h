@@ -84,6 +84,10 @@ namespace KBSResultModel
 	    text range. false = index out of range. */
 	bool GetHitLocation(int32 chapterIdx, int32 hitIdx,
 		UIDRef& outDocRef, IDFile& outFile, UID& outStoryUID, TextIndex& outStart, TextIndex& outEnd);
+
+	/** Rebind a chapter's document reference (Task 3): after a closed chapter is reopened at jump
+	    time, later jumps must use the live database, not the dead one from search time. */
+	void RebindChapterDoc(int32 chapterIdx, const UIDRef& newDocRef);
 }
 
 #endif // __KBSResultModel_h__

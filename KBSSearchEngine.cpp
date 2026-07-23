@@ -382,9 +382,9 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 
 	KBSResultModel::SetResults(chapters);
 
-	// Task 2: the hits' display text is already extracted, so nothing needs the windowless
-	// chapters held. Release them (Task 3 will hold them for the result-row jumps instead).
-	KBSBookScope::ReleaseHeldDocs();
+	// Task 3: the windowless chapters stay HELD so a hit-row jump can reach them without a
+	// document load. They are released only when a DIFFERENT book is searched (KBSBookScope's
+	// book-switch guard) or at shutdown - a same-book re-search reuses them.
 
 	// The one-line summary. The hit count leads, so it stays visible even when the narrow
 	// single-line status field truncates the tail.

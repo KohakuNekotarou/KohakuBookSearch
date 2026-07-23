@@ -96,4 +96,11 @@ bool KBSResultModel::GetHitLocation(int32 chapterIdx, int32 hitIdx,
 	return true;
 }
 
+void KBSResultModel::RebindChapterDoc(int32 chapterIdx, const UIDRef& newDocRef)
+{
+	if (chapterIdx < 0 || chapterIdx >= static_cast<int32>(gChapters.size()))
+		return;
+	gChapters[chapterIdx].docRef = newDocRef;
+}
+
 // End, KBSResultModel.cpp.

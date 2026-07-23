@@ -17,11 +17,16 @@
 #include "IBookContent.h"
 #include "IBookContentMgr.h"
 #include "IBookManager.h"
-#include "IBookUtils.h"			// OpenOneDocument, OriginallyCloseDocInfo
+#include "IBookUtils.h"			// OpenOneDocument, OriginallyCloseDocInfo, IsSourceDocumentAlreadyOpen
+#include "IDataBase.h"			// IsModified (the hide sweep skips dirty docs)
 #include "IDocFileHandler.h"
 #include "IDocument.h"
+#include "IDocumentCommands.h"	// Open by file (windowless reopen)
 #include "IDocumentList.h"
+#include "IDocumentUIUtils.h"	// FindPresentationForDocument (has-a-window test)
+#include "IDocumentPresentation.h"	// the predicate typedef / presentation handle
 #include "IDocumentUtils.h"
+#include "IOpenFileCmdData.h"	// kOpenDefault / kUseLockFile
 #include "ISession.h"
 
 // General includes:
@@ -100,6 +105,106 @@ void KBSBookScope::ShutdownCleanup()
 	// the vector's storage too, so the static destructor at DLL unload finds nothing to do.
 	gHeldDocInfo.Clear();
 	gHeldBookPath.Clear();
+}
+
+// Accepts every presentation. A local stand-in for the stock accept-all predicate (KESCL keeps
+// its own too, so we do not depend on where the stock predicate objects live).
+static bool KBSAcceptAnyPresentation(IDocumentPresentation* /*p*/)
+{
+	return true;
+}
+
+bool KBSBookScope::ReopenChapterDoc(const IDFile& file, UIDRef& outDocRef)
+{
+	outDocRef = UIDRef::gNull;
+
+	SDKFileHelper fileHelper(file);
+	if (fileHelper.GetPath().empty())
+		return false;	// a front-document entry carries no file - nothing to reopen
+
+	// If the user reopened it themselves, rebind to THEIR document and do NOT hold it (closing it
+	// would surprise them).
+	{
+		int32 fileIndex = -1;
+		if (Utils<IBookUtils>()->IsSourceDocumentAlreadyOpen(file, fileIndex))
+		{
+			InterfacePtr<IDocumentList> docList(GetExecutionContextSession()->QueryDocumentList());
+			if (docList != nil)
+			{
+				IDocument* doc = docList->GetNthDoc(fileIndex);
+				if (doc != nil)
+				{
+					outDocRef = ::GetUIDRef(doc);
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
+	// The windowless, UI-suppressed open - by FILE (the book may be closed).
+	UIDRef docRef;
+	const ErrorCode err = Utils<IDocumentCommands>()->Open(&docRef, file, kSuppressUI,
+		IOpenFileCmdData::kOpenDefault, IOpenFileCmdData::kUseLockFile, kFalse /*showInWindow*/);
+	if (err != kSuccess || docRef == UIDRef::gNull)
+	{
+		ErrorUtils::PMSetGlobalErrorCode(kSuccess);	// a failed open must not poison later commands
+		return false;
+	}
+
+	// Held, so ReleaseHeldDocs closes it later.
+	gHeldDocInfo.fCurrentOpenedDocumentList.push_back(docRef);
+	outDocRef = docRef;
+	return true;
+}
+
+void KBSBookScope::CloseDisplayedDocsIfClean(const UIDRef& exceptDoc)
+{
+	InterfacePtr<IDocumentList> docList(GetExecutionContextSession()->QueryDocumentList());
+	if (docList == nil)
+		return;
+
+	// Collect first, then close (closing mutates the document list).
+	K2Vector<UIDRef> toClose;
+	const int32 count = docList->GetDocCount();
+	for (int32 i = 0; i < count; ++i)
+	{
+		IDocument* doc = docList->GetNthDoc(i);
+		if (doc == nil)
+			continue;
+		const UIDRef ref = ::GetUIDRef(doc);
+		if (ref == exceptDoc)
+			continue;	// the document the jump just landed in stays
+
+		IDataBase* db = ref.GetDataBase();
+		if (db == nil || db->IsModified())
+			continue;	// a dirty document would want a save - leave it to the user
+
+		// Only documents that HAVE a window go: a windowless held chapter survives as the reopen
+		// cache (speed over tidiness).
+		FindPresentation_PreferCriteria noPreference;
+		IDocumentPresentation* pres = Utils<IDocumentUIUtils>()->FindPresentationForDocument(
+			db, KBSAcceptAnyPresentation, noPreference);
+		if (pres == nil)
+			continue;	// windowless - keep it held
+
+		toClose.push_back(ref);
+	}
+
+	for (int32 i = 0; i < static_cast<int32>(toClose.size()); ++i)
+	{
+		// Drop it from the held list first (a closed held chapter must come off before its close).
+		for (int32 h = static_cast<int32>(gHeldDocInfo.fCurrentOpenedDocumentList.size()) - 1; h >= 0; --h)
+		{
+			if (gHeldDocInfo.fCurrentOpenedDocumentList[h] == toClose[i])
+				gHeldDocInfo.fCurrentOpenedDocumentList.erase(gHeldDocInfo.fCurrentOpenedDocumentList.begin() + h);
+		}
+		InterfacePtr<IDocFileHandler> docFileHandler(Utils<IDocumentUtils>()->QueryDocFileHandler(toClose[i]));
+		if (docFileHandler == nil)
+			continue;
+		if (docFileHandler->CanClose(toClose[i]))
+			docFileHandler->Close(toClose[i], kSuppressUI, kFalse /*allowCancel*/, IDocFileHandler::kSchedule);
+	}
 }
 
 bool KBSBookScope::HasActiveBook()

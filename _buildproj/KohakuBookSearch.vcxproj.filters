@@ -36,6 +36,21 @@
       <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSColorTextView.cpp">
          <Filter>Source Files</Filter>
       </ClCompile>
+      <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSDrawEventHandler.cpp">
+         <Filter>Source Files</Filter>
+      </ClCompile>
+      <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSMarkerExpiryIdleTask.cpp">
+         <Filter>Source Files</Filter>
+      </ClCompile>
+      <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSJump.cpp">
+         <Filter>Source Files</Filter>
+      </ClCompile>
+      <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSResultNodeEH.cpp">
+         <Filter>Source Files</Filter>
+      </ClCompile>
+      <ClCompile Include="..\..\..\source\sdksamples\KBS\KBSStartupShutdown.cpp">
+         <Filter>Source Files</Filter>
+      </ClCompile>
       <ClCompile Include="$(id_sdk_dir)\source\public\libs\publiclib\statics\PlugInStatics.cpp">
          <Filter>Source Files\Plugin</Filter>
       </ClCompile>
@@ -81,6 +96,15 @@
          <Filter>Header Files</Filter>
       </ClInclude>
       <ClInclude Include="..\..\..\source\sdksamples\KBS\KBSResultTree.h">
+         <Filter>Header Files</Filter>
+      </ClInclude>
+      <ClInclude Include="..\..\..\source\sdksamples\KBS\KBSDrawEventHandler.h">
+         <Filter>Header Files</Filter>
+      </ClInclude>
+      <ClInclude Include="..\..\..\source\sdksamples\KBS\KBSMarkerExpiryIdleTask.h">
+         <Filter>Header Files</Filter>
+      </ClInclude>
+      <ClInclude Include="..\..\..\source\sdksamples\KBS\KBSJump.h">
          <Filter>Header Files</Filter>
       </ClInclude>
    </ItemGroup>

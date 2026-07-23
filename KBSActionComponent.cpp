@@ -41,6 +41,7 @@
 #include "KBSID.h"
 #include "KBSSearchEngine.h"
 #include "KBSResultTree.h"		// rebuild the result tree after a search
+#include "KBSJump.h"			// the Hide Previous Chapter toggle lives with the jump logic
 
 /** Implements IActionComponent; performs the actions that are executed when the plug-in's
 	menu items are selected.
@@ -88,10 +89,6 @@ public:
  application.
 */
 CREATE_PMINTERFACE(KBSActionComponent, kKBSActionComponentImpl)
-
-// Session-only toggle state (not persisted). Real "close previous chapter on jump"
-// behaviour is connected in a later step; for now this only drives the check mark.
-static bool16 sHidePrevChapter = kFalse;
 
 /* ShowStatus
 	Write a one-line message to the panel's status read-out. A single-line StaticText does not
@@ -149,8 +146,9 @@ void KBSActionComponent::DoAction(IActiveContext* ac, ActionID actionID, GSysPoi
 
 		case kKBSHidePrevChapterActionID:
 		{
-			// Toggle the session-only flag. Its check mark is drawn in UpdateActionStates.
-			sHidePrevChapter = !sHidePrevChapter;
+			// Toggle the session flag that JumpToHit reads. Its check mark is drawn in
+			// UpdateActionStates.
+			KBSJump::ToggleHidePreviousChapter();
 			break;
 		}
 
@@ -189,7 +187,7 @@ void KBSActionComponent::UpdateActionStates(IActiveContext* /*ac*/, IActionState
 		if (action == kKBSHidePrevChapterActionID)
 		{
 			int16 actionState = kEnabledAction;
-			if (sHidePrevChapter)
+			if (KBSJump::IsHidePreviousChapterOn())
 				actionState |= kSelectedAction;		// show the check mark when ON
 			listToUpdate->SetNthActionState(i, actionState);
 		}

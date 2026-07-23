@@ -47,6 +47,8 @@
 #include "TreeViewDefs.h"	// kHideRootNode etc. - the result tree list (Task 2)
 #include "IconRsrcDefs.h"	// kTreeBranchCollapsed/ExpandedRsrcID - the tree's expander arrows
 #include "IconStyleDefs.h"	// kIconNoCentering / kIconRaisedLook - the expander's icon attributes
+#include "GraphicsID.h"		// IID_IDRWEVTHANDLER - the red-marker draw handler (Task 3)
+#include "AppFrameworkID.h"	// IID_ISTARTUPSHUTDOWN / kLazyStartupShutdownProviderImpl (Task 3)
 
 // Project includes:
 #include "KBSID.h"
@@ -159,6 +161,62 @@ resource ClassDescriptionTable(kSDKDefClassDescriptionTableResourceID)
 		{
 			IID_ICONTROLVIEW, kKBSColorTextViewImpl,
 			IID_IKBSROWDATA, kKBSRowDataImpl,
+		}
+	},
+
+	/*
+	 * Result tree row (Task 3): the node boss now carries the click handler that jumps to a hit.
+	 * Shared by the chapter and hit row resources; the handler tells them apart by the node index
+	 * (only hit rows jump).
+	 */
+	Class
+	{
+		kKBSResultNodeWidgetBoss,
+		kTreeNodeWidgetBoss,
+		{
+			IID_IEVENTHANDLER, kKBSResultNodeEHImpl,
+		}
+	},
+
+	/*
+	 * Draw-event-handler service boss (Task 3): registers kDrawEventService (via IK2ServiceProvider)
+	 * so the sibling IDrwEvtHandler is hooked into the draw-event dispatcher at startup; it draws
+	 * the translucent red marker rectangle around a jumped-to hit.
+	 */
+	Class
+	{
+		kKBSDrawEventServiceBoss,
+		kInvalidClass,
+		{
+			IID_IK2SERVICEPROVIDER, kKBSDrawEventSrvcImpl,
+			IID_IDRWEVTHANDLER,     kKBSDrawEventHandlerImpl,
+		}
+	},
+
+	/*
+	 * Marker-expiry idle task boss (Task 3): a one-shot idle task, armed each time the marker is
+	 * shown, that takes it back off the screen a second later. IID_IIDLETASK comes from ShuksanID.h.
+	 */
+	Class
+	{
+		kKBSMarkerExpiryIdleTaskBoss,
+		kInvalidClass,
+		{
+			IID_IIDLETASK, kKBSMarkerExpiryIdleTaskImpl,
+		}
+	},
+
+	/*
+	 * Startup/shutdown service boss (Task 3): retires the marker idle task and clears module state
+	 * during controlled shutdown. kLazyStartupShutdownProviderImpl (API-provided) registers it.
+	 */
+	Class
+	{
+		kKBSStartupShutdownBoss,
+		kInvalidClass,
+		{
+			IID_ISTARTUPSHUTDOWN, kKBSStartupShutdownImpl,
+			IID_IK2SERVICEPROVIDER, kLazyStartupShutdownProviderImpl,
 		}
 	},
 
@@ -358,7 +416,7 @@ type KBSResultListWidget(kViewRsrcType) : TreeViewWidget(ClassID = kKBSResultLis
 {
 };
 
-type KBSResultNodeWidget(kViewRsrcType) : PrimaryResourcePanelWidget(ClassID = kTreeNodeWidgetBoss)
+type KBSResultNodeWidget(kViewRsrcType) : PrimaryResourcePanelWidget(ClassID = kKBSResultNodeWidgetBoss)
 {
 };
 

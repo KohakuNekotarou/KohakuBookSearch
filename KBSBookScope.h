@@ -60,6 +60,18 @@ namespace KBSBookScope
 	    search or a notification. */
 	void ReleaseHeldDocs();
 
+	/** Reopen a chapter by its file (Task 3 jump): if the user reopened it themselves, rebind to
+	    THEIR open copy (and do not hold it); otherwise open it windowless + UI-suppressed and hold
+	    it. The (re)opened document is returned in outDocRef. false = cannot reopen (missing file,
+	    locked). Used when a jump target's held chapter was closed by the user since the search. */
+	bool ReopenChapterDoc(const IDFile& file, UIDRef& outDocRef);
+
+	/** The "Hide Previous Chapter" sweep (Task 3): close every OTHER document that HAS a window and
+	    needs no save, on schedule - whoever opened it. The exception document (the one a jump just
+	    landed in) and the windowless held chapters (the reopen cache) survive. Dirty documents stay
+	    (closing them would want a save). */
+	void CloseDisplayedDocsIfClean(const UIDRef& exceptDoc);
+
 	/** Application-shutdown cleanup (state only, no closing, no UI): forget the held-chapter
 	    list without closing anything - the quitting application closes every document itself. */
 	void ShutdownCleanup();
