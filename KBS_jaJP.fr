@@ -1,0 +1,61 @@
+//========================================================================================
+//  
+//  $File: $
+//  
+//  Owner: 
+//  
+//  $Author: $
+//  
+//  $DateTime: $
+//  
+//  $Revision: $
+//  
+//  $Change: $
+//  
+//  Copyright 1997-2008 Adobe Systems Incorporated. All rights reserved.
+//  
+//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
+//  with the terms of the Adobe license agreement accompanying it.  If you have received
+//  this file from a source other than Adobe, then your use, modification, or 
+//  distribution of it requires the prior written permission of Adobe.
+//  
+//========================================================================================
+
+#ifdef __ODFRC__
+
+
+// Japanese string table is defined here
+
+resource StringTable (kSDKDefStringsResourceID + index_jaJP)
+{
+        k_jaJP,	// Locale Id
+        0,		// Character encoding converter
+
+        {
+        	// ----- Menu strings
+                kKBSCompanyKey,					"Kohaku Plug-Ins",	// メニュー束ね名(表示。KESCM同様、会社名kKBSCompanyValueとは別)
+                kKBSAboutMenuKey,					kKBSPluginName "...",
+                kKBSPluginsMenuKey,				kKBSPluginName,
+
+                kSDKDefAboutThisPlugInMenuKey,			kSDKDefAboutThisPlugInMenuValue_jaJP,
+
+                // ----- Command strings
+                kKBSSearchBookMenuKey,			"Search Book",
+                kKBSHidePrevChapterMenuKey,		"Hide Previous Chapter",
+
+                // ----- Window strings
+
+                // ----- Panel/dialog strings
+                kKBSPanelTitleKey,				kKBSPluginName,
+                kKBSStaticTextKey,				kKBSPluginName,
+
+              // ----- Error strings
+
+                // ----- Misc strings
+                kKBSAboutBoxStringKey,			kKBSPluginName ", version " kKBSVersion " by " kKBSAuthor "\n\n" kSDKDefCopyrightStandardValue "\n\n" kSDKDefPartnersStandardValue_jaJP,
+
+        }
+
+};
+
+#endif // __ODFRC__

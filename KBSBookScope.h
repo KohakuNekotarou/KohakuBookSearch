@@ -1,0 +1,68 @@
+//========================================================================================
+//
+//  Owner: KohakuNekotarou
+//
+//  KohakuBookSearch (KBS)
+//
+//  Book-wide search scope. Turns the active book (IBookManager::GetCurrentActiveBook) into a
+//  list of searchable chapter documents. Chapters that are not open are opened WITHOUT a
+//  layout window - the same windowless open InDesign's own TOC/index-across-book machinery
+//  uses (Utils<IBookUtils>::OpenOneDocument) - and stay held open until ReleaseHeldDocs.
+//
+//  Ported from KESCL's KESCLBookScope (KESCL is left untouched). This Step-1 subset keeps only
+//  what a count needs: enumerate the book's chapters, hold the ones we opened, and release
+//  them afterwards. The jump-time reopen/early-close machinery arrives with the result panel.
+//  KBS always searches the active book, so KESCL's "Search book" toggle is dropped here.
+//
+//========================================================================================
+
+#ifndef __KBSBookScope_h__
+#define __KBSBookScope_h__
+
+#include "IDFile.h"
+#include "PMString.h"
+#include "UIDRef.h"
+
+#include <vector>
+
+namespace KBSBookScope
+{
+	/** One searchable document: a book chapter (shortName = its file name for the read-out;
+	    file = the chapter's .indd so a closed chapter can be reopened later). */
+	struct ChapterDoc
+	{
+		UIDRef		docRef;
+		PMString	shortName;
+		IDFile		file;
+	};
+
+	/** Is there an active book right now? A cheap look at IBookManager only - nothing is
+	    opened, listed or held. */
+	bool HasActiveBook();
+
+	/** List the active book's chapters as open documents, in book order. Chapters that are not
+	    open are opened windowless here (and remembered, so ReleaseHeldDocs can close them
+	    again); chapters already open are used as they are. Chapters whose document cannot be
+	    opened (missing file, in use elsewhere) are skipped.
+
+	    @param outDocs      the chapters as (document, file name) pairs; empty on failure.
+	    @param outBookName  the active book's title, for status messages.
+	    @return true when there is an active book with at least one openable chapter. */
+	bool GetBookChapterDocs(std::vector<ChapterDoc>& outDocs, PMString& outBookName);
+
+	/** Is this document still in the session's open-document list? Compares list entries
+	    against the UIDRef without dereferencing its (possibly dead) database. */
+	bool IsDocStillOpen(const UIDRef& docRef);
+
+	/** Close the chapters this module opened (the originally-closed ones only). Chapters the
+	    user already had open are never touched. The closes are SCHEDULED
+	    (IDocFileHandler::kSchedule + kSuppressUI), so this is safe to call from inside a
+	    search or a notification. */
+	void ReleaseHeldDocs();
+
+	/** Application-shutdown cleanup (state only, no closing, no UI): forget the held-chapter
+	    list without closing anything - the quitting application closes every document itself. */
+	void ShutdownCleanup();
+}
+
+#endif // __KBSBookScope_h__

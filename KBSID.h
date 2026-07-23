@@ -1,0 +1,248 @@
+//========================================================================================
+//  
+//  $File: $
+//  
+//  Owner: 
+//  
+//  $Author: $
+//  
+//  $DateTime: $
+//  
+//  $Revision: $
+//  
+//  $Change: $
+//  
+//  Copyright 1997-2012 Adobe Systems Incorporated. All rights reserved.
+//  
+//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
+//  with the terms of the Adobe license agreement accompanying it.  If you have received
+//  this file from a source other than Adobe, then your use, modification, or 
+//  distribution of it requires the prior written permission of Adobe.
+//  
+//========================================================================================
+
+
+#ifndef __KBSID_h__
+#define __KBSID_h__
+
+#include "SDKDef.h"
+
+// Company:
+#define kKBSCompanyKey	"KohakuNekotarou"		// Company name used internally for menu paths and the like. Must be globally unique, only A-Z, 0-9, space and "_". (Matches KESCL/KESCM so all group under Plug-Ins > KohakuNekotarou.)
+#define kKBSCompanyValue	"KohakuNekotarou"	// Company name displayed externally.
+
+// Plug-in:
+#define kKBSPluginName	"KohakuBookSearch"			// Name of this plug-in.
+#define kKBSPrefixNumber	0x205698 		// Unique prefix number for this plug-in(*Must* be obtained from Adobe Developer Support).
+#define kKBSVersion		kSDKDefPluginVersionString						// Version of this plug-in (for the About Box).
+#define kKBSAuthor		""					// Author of this plug-in (for the About Box).
+
+// Plug-in Prefix: (please change kKBSPrefixNumber above to modify the prefix.)
+#define kKBSPrefix		RezLong(kKBSPrefixNumber)				// The unique numeric prefix for all object model IDs for this plug-in.
+#define kKBSStringPrefix	SDK_DEF_STRINGIZE(kKBSPrefixNumber)	// The string equivalent of the unique prefix number for  this plug-in.
+
+// Missing plug-in: (see ExtraPluginInfo resource)
+#define kKBSMissingPluginURLValue		kSDKDefPartnersStandardValue_enUS // URL displayed in Missing Plug-in dialog
+#define kKBSMissingPluginAlertValue	kSDKDefMissingPluginAlertValue // Message displayed in Missing Plug-in dialog - provide a string that instructs user how to solve their missing plug-in problem
+
+// PluginID:
+DECLARE_PMID(kPlugInIDSpace, kKBSPluginID, kKBSPrefix + 0)
+
+// ClassIDs:
+DECLARE_PMID(kClassIDSpace, kKBSActionComponentBoss, kKBSPrefix + 0)
+DECLARE_PMID(kClassIDSpace, kKBSPanelWidgetBoss, kKBSPrefix + 1)
+// Result tree (Task 2): the tree-view list, its row (node) boss shared by chapter and hit rows,
+// and the custom multi-colour text cell that highlights the matched part of a hit line.
+DECLARE_PMID(kClassIDSpace, kKBSResultListWidgetBoss, kKBSPrefix + 2)
+DECLARE_PMID(kClassIDSpace, kKBSResultNodeWidgetBoss, kKBSPrefix + 3)
+DECLARE_PMID(kClassIDSpace, kKBSColorTextWidgetBoss, kKBSPrefix + 4)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 5)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 6)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 7)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 8)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 9)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 10)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 11)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 12)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 13)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 14)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 15)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 16)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 17)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 18)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 19)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 20)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 21)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 22)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 23)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 24)
+//DECLARE_PMID(kClassIDSpace, kKBSBoss, kKBSPrefix + 25)
+
+
+// InterfaceIDs:
+// Per-row draw data for a hit line's colour cell: the three text segments (before / matched /
+// after) the cell paints, the match segment in a highlight colour.
+DECLARE_PMID(kInterfaceIDSpace, IID_IKBSROWDATA, kKBSPrefix + 0)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 1)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 2)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 3)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 4)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 5)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 6)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 7)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 8)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 9)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 10)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 11)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 12)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 13)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 14)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 15)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 16)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 17)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 18)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 19)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 20)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 21)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 22)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 23)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 24)
+//DECLARE_PMID(kInterfaceIDSpace, IID_IKBSINTERFACE, kKBSPrefix + 25)
+
+
+// ImplementationIDs:
+DECLARE_PMID(kImplementationIDSpace, kKBSActionComponentImpl, kKBSPrefix + 0 )
+// Result tree (Task 2): hierarchy adapter, row widget manager, the colour cell's view and its
+// per-row data holder.
+DECLARE_PMID(kImplementationIDSpace, kKBSResultListAdapterImpl, kKBSPrefix + 1)
+DECLARE_PMID(kImplementationIDSpace, kKBSResultListWidgetMgrImpl, kKBSPrefix + 2)
+DECLARE_PMID(kImplementationIDSpace, kKBSColorTextViewImpl, kKBSPrefix + 3)
+DECLARE_PMID(kImplementationIDSpace, kKBSRowDataImpl, kKBSPrefix + 4)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 5)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 6)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 7)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 8)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 9)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 10)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 11)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 12)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 13)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 14)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 15)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 16)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 17)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 18)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 19)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 20)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 21)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 22)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 23)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 24)
+//DECLARE_PMID(kImplementationIDSpace, kKBSImpl, kKBSPrefix + 25)
+
+
+// ActionIDs:
+DECLARE_PMID(kActionIDSpace, kKBSAboutActionID, kKBSPrefix + 0)
+DECLARE_PMID(kActionIDSpace, kKBSPanelWidgetActionID, kKBSPrefix + 1)
+DECLARE_PMID(kActionIDSpace, kKBSSeparator1ActionID, kKBSPrefix + 2)
+DECLARE_PMID(kActionIDSpace, kKBSPopupAboutThisActionID, kKBSPrefix + 3)
+DECLARE_PMID(kActionIDSpace, kKBSSearchBookActionID, kKBSPrefix + 4)
+DECLARE_PMID(kActionIDSpace, kKBSHidePrevChapterActionID, kKBSPrefix + 5)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 6)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 6)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 7)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 8)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 9)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 10)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 11)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 12)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 13)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 14)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 15)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 16)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 17)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 18)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 19)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 20)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 21)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 22)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 23)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 24)
+//DECLARE_PMID(kActionIDSpace, kKBSActionID, kKBSPrefix + 25)
+
+
+// WidgetIDs:
+DECLARE_PMID(kWidgetIDSpace, kKBSPanelWidgetID, kKBSPrefix + 0)
+DECLARE_PMID(kWidgetIDSpace, kKBSStaticTextWidgetID, kKBSPrefix + 1)
+// Result tree (Task 2): the tree list widget; the chapter-row container + its label cell; the
+// hit-row container + its multi-colour text cell.
+DECLARE_PMID(kWidgetIDSpace, kKBSResultListWidgetID, kKBSPrefix + 2)
+DECLARE_PMID(kWidgetIDSpace, kKBSResultChapterNodeWidgetID, kKBSPrefix + 3)
+DECLARE_PMID(kWidgetIDSpace, kKBSResultChapterLabelWidgetID, kKBSPrefix + 4)
+DECLARE_PMID(kWidgetIDSpace, kKBSResultHitNodeWidgetID, kKBSPrefix + 5)
+DECLARE_PMID(kWidgetIDSpace, kKBSResultTextWidgetID, kKBSPrefix + 6)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 7)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 8)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 9)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 10)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 11)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 12)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 13)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 14)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 15)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 16)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 17)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 18)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 19)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 20)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 21)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 22)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 23)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 24)
+//DECLARE_PMID(kWidgetIDSpace, kKBSWidgetID, kKBSPrefix + 25)
+
+
+// "About Plug-ins" sub-menu:
+#define kKBSAboutMenuKey			kKBSStringPrefix "kKBSAboutMenuKey"
+#define kKBSAboutMenuPath		kSDKDefStandardAboutMenuPath kKBSCompanyKey
+
+// "Plug-ins" sub-menu:
+#define kKBSPluginsMenuKey 		kKBSStringPrefix "kKBSPluginsMenuKey"
+#define kKBSPluginsMenuPath		kSDKDefPlugInsStandardMenuPath kKBSCompanyKey kSDKDefDelimitMenuPath kKBSPluginsMenuKey
+
+// Menu item keys:
+#define kKBSSearchBookMenuKey			kKBSStringPrefix "kKBSSearchBookMenuKey"
+#define kKBSHidePrevChapterMenuKey		kKBSStringPrefix "kKBSHidePrevChapterMenuKey"
+
+// Other StringKeys:
+#define kKBSAboutBoxStringKey	kKBSStringPrefix "kKBSAboutBoxStringKey"
+#define kKBSPanelTitleKey					kKBSStringPrefix	"kKBSPanelTitleKey"
+// Panel entry under the Plug-Ins menu (Plug-Ins > KohakuNekotarou > KohakuBookSearch), like KESCL/KESCM:
+#define kKBSPanelPluginsMenuPath			kSDKDefPlugInsStandardMenuPath kKBSCompanyKey kSDKDefDelimitMenuPath kKBSPanelTitleKey
+#define kKBSPanelPluginsMenuPosition		101.0
+#define kKBSStaticTextKey kKBSStringPrefix	"kKBSStaticTextKey"
+#define kKBSInternalPopupMenuNameKey kKBSStringPrefix	"kKBSInternalPopupMenuNameKey"
+#define kKBSTargetMenuPath kKBSInternalPopupMenuNameKey
+
+// Menu item positions:
+
+#define kKBSSearchBookMenuItemPosition		1.0
+#define kKBSHidePrevChapterMenuItemPosition	2.0
+#define	kKBSSeparator1MenuItemPosition		10.0
+#define kKBSAboutThisMenuItemPosition		11.0
+
+
+// View (kViewRsrcType) resource IDs for the result tree's row widgets (Task 2). Offset from the
+// panel's own resource ID (kSDKDefPanelResourceID), like the KESCL report panel's row resources.
+#define kKBSResultChapterNodeWidgetRsrcID	(kSDKDefPanelResourceID + 20)
+#define kKBSResultHitNodeWidgetRsrcID		(kSDKDefPanelResourceID + 21)
+
+// Initial data format version numbers
+#define kKBSFirstMajorFormatNumber  RezLong(1)
+#define kKBSFirstMinorFormatNumber  RezLong(0)
+
+// Data format version numbers for the PluginVersion resource 
+#define kKBSCurrentMajorFormatNumber kKBSFirstMajorFormatNumber
+#define kKBSCurrentMinorFormatNumber kKBSFirstMinorFormatNumber
+
+#endif // __KBSID_h__

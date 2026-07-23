@@ -1,0 +1,28 @@
+//========================================================================================
+//  
+//  $File: $
+//  
+//  Owner: 
+//  
+//  $Author: $
+//  
+//  $DateTime: $
+//  
+//  $Revision: $
+//  
+//  $Change: $
+//  
+//  Copyright 1997-2012 Adobe Systems Incorporated. All rights reserved.
+//  
+//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
+//  with the terms of the Adobe license agreement accompanying it.  If you have received
+//  this file from a source other than Adobe, then your use, modification, or 
+//  distribution of it requires the prior written permission of Adobe.
+//  
+//========================================================================================
+REGISTER_PMINTERFACE(KBSActionComponent, kKBSActionComponentImpl)
+// Result tree (Task 2): hierarchy adapter, row widget manager, the colour cell's view + data.
+REGISTER_PMINTERFACE(KBSResultListAdapter, kKBSResultListAdapterImpl)
+REGISTER_PMINTERFACE(KBSResultListWidgetMgr, kKBSResultListWidgetMgrImpl)
+REGISTER_PMINTERFACE(KBSColorTextView, kKBSColorTextViewImpl)
+REGISTER_PMINTERFACE(KBSRowData, kKBSRowDataImpl)

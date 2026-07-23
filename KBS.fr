@@ -1,0 +1,534 @@
+//========================================================================================
+//  
+//  $File: $
+//  
+//  Owner: 
+//  
+//  $Author: $
+//  
+//  $DateTime: $
+//  
+//  $Revision: $
+//  
+//  $Change: $
+//  
+//  Copyright 1997-2012 Adobe Systems Incorporated. All rights reserved.
+//  
+//  NOTICE:  Adobe permits you to use, modify, and distribute this file in accordance 
+//  with the terms of the Adobe license agreement accompanying it.  If you have received
+//  this file from a source other than Adobe, then your use, modification, or 
+//  distribution of it requires the prior written permission of Adobe.
+//  
+//========================================================================================
+
+#include "VCPlugInHeaders.h"
+
+// General includes:
+#include "MenuDef.fh"
+#include "ActionDef.fh"
+#include "ActionDefs.h"
+#include "AdobeMenuPositions.h"
+#include "LocaleIndex.h"
+#include "PMLocaleIds.h"
+#include "StringTable.fh"
+#include "ObjectModelTypes.fh"
+#include "ShuksanID.h"
+#include "ActionID.h"
+#include "CommandID.h"
+#include "WorkspaceID.h"
+#include "WidgetID.h"
+#include "BuildNumber.h"
+#include "PlugInModel_UIAttributes.h"
+#include "PanelList.fh"
+#include "InterfaceColorDefines.h"
+#include "IControlViewDefs.h"
+#include "SysControlIDs.h"
+#include "Widgets.fh"	// for PalettePanelWidget or DialogBoss
+#include "TreeViewDefs.h"	// kHideRootNode etc. - the result tree list (Task 2)
+#include "IconRsrcDefs.h"	// kTreeBranchCollapsed/ExpandedRsrcID - the tree's expander arrows
+#include "IconStyleDefs.h"	// kIconNoCentering / kIconRaisedLook - the expander's icon attributes
+
+// Project includes:
+#include "KBSID.h"
+#include "GenericID.h"
+#include "ShuksanID.h"
+#include "TextID.h"
+
+
+#ifdef __ODFRC__
+
+/*  
+ * Plugin version definition.
+ */
+resource PluginVersion (kSDKDefPluginVersionResourceID)
+{
+	kTargetVersion,
+	kKBSPluginID,
+	kSDKDefPlugInMajorVersionNumber, kSDKDefPlugInMinorVersionNumber,
+	kSDKDefHostMajorVersionNumber, kSDKDefHostMinorVersionNumber,
+	kKBSCurrentMajorFormatNumber, kKBSCurrentMinorFormatNumber,
+	{ kInDesignProduct },
+	{ kWildFS },
+	kUIPlugIn,
+	kKBSVersion
+};
+
+/*  
+ * The ExtraPluginInfo resource adds extra information to the Missing Plug-in dialog
+ * that is popped when a document containing this plug-in's data is opened when
+ * this plug-in is not present. These strings are not translatable strings
+ * since they must be available when the plug-in isn't around. They get stored
+ * in any document that this plug-in contributes data to.
+ */
+resource ExtraPluginInfo(1)
+{
+	kKBSCompanyValue,			// Company name
+	kKBSMissingPluginURLValue,	// URL 
+	kKBSMissingPluginAlertValue,	// Missing plug-in alert text
+};
+
+/* 
+ * Boss class definitions.
+ */
+resource ClassDescriptionTable(kSDKDefClassDescriptionTableResourceID)
+{{{
+
+	/*
+	 * This boss class supports two interfaces:
+	 * IActionComponent and IPMPersist.
+     *
+	 * 
+	 * @ingroup kohakubooksearch
+	 */
+	Class
+	{
+		kKBSActionComponentBoss,
+		kInvalidClass,
+		{
+			// Handle the actions from the menu.
+			IID_IACTIONCOMPONENT, kKBSActionComponentImpl,
+			// Persist the state of the menu across application instantiation. Implementation provided by the API.
+			IID_IPMPERSIST, kPMPersistImpl
+		}
+	},
+
+    /*
+	 * This boss class inherits from an API panel boss class, and
+	 * adds an interface to control a pop-up menu on the panel.
+	 * The implementation for this interface is provided by the API.
+     *
+	 * 
+	 * @ingroup kohakubooksearch
+	 */
+	Class
+	{
+		kKBSPanelWidgetBoss,
+		kPalettePanelWidgetBoss,
+		{
+			/*
+			 * The plug-in's implementation of ITextControlData with an exotic IID of IID_IPANELMENUDATA.
+			 * Implementation provided by the API.
+			 */
+			IID_IPANELMENUDATA, kCPanelMenuDataImpl,
+		}
+	},
+
+	/*
+	 * Result tree list (Task 2): the tree-view widget carrying our hierarchy adapter and row
+	 * widget manager. The framework provides the tree controller and default event handling
+	 * (selection, expand/collapse); the row-click jump handler arrives in Task 3.
+	 */
+	Class
+	{
+		kKBSResultListWidgetBoss,
+		kTreeViewWidgetBoss,
+		{
+			IID_ITREEVIEWHIERARCHYADAPTER, kKBSResultListAdapterImpl,
+			IID_ITREEVIEWWIDGETMGR, kKBSResultListWidgetMgrImpl,
+		}
+	},
+
+	/*
+	 * The hit line's multi-colour text cell (Task 2): a generic panel widget whose IControlView
+	 * is our self-drawing view (KBSColorTextView), plus the per-row draw data it paints.
+	 */
+	Class
+	{
+		kKBSColorTextWidgetBoss,
+		kGenericPanelWidgetBoss,
+		{
+			IID_ICONTROLVIEW, kKBSColorTextViewImpl,
+			IID_IKBSROWDATA, kKBSRowDataImpl,
+		}
+	},
+
+}}};
+
+/*  
+ * Implementation definition.
+ */
+resource FactoryList (kSDKDefFactoryListResourceID)
+{
+	kImplementationIDSpace,
+	{
+		#include "KBSFactoryList.h"
+	}
+};
+
+/*  
+ * Menu definition.
+ */
+resource MenuDef (kSDKDefMenuResourceID)
+{
+	{
+		// The About sub-menu item for this plug-in.
+		kKBSAboutActionID,			// ActionID (kInvalidActionID for positional entries)
+		kKBSAboutMenuPath,			// Menu Path.
+		kSDKDefAlphabeticPosition,											// Menu Position.
+		kSDKDefIsNotDynamicMenuFlag,										// kSDKDefIsNotDynamicMenuFlag or kSDKDefIsDynamicMenuFlag
+
+		// Separator for the popup menu on the panel
+		kKBSSeparator1ActionID,
+		kKBSInternalPopupMenuNameKey kSDKDefDelimiterAndSeparatorPath,	// :- to mark an item as a separator.
+		kKBSSeparator1MenuItemPosition,
+		kSDKDefIsNotDynamicMenuFlag,
+
+		// Search Book: run the book-wide search using the current Find/Change settings.
+		kKBSSearchBookActionID,
+		kKBSTargetMenuPath
+		kKBSSearchBookMenuItemPosition,
+		kSDKDefIsNotDynamicMenuFlag,
+
+		// Hide Previous Chapter: toggle (check mark). Closes the previous chapter window on jump.
+		kKBSHidePrevChapterActionID,
+		kKBSTargetMenuPath
+		kKBSHidePrevChapterMenuItemPosition,
+		kSDKDefIsNotDynamicMenuFlag,
+
+		// About this plug-in sub-menu for the popup menu on the panel
+		kKBSPopupAboutThisActionID,
+		kKBSTargetMenuPath
+		kKBSAboutThisMenuItemPosition,
+		kSDKDefIsNotDynamicMenuFlag,
+
+	}
+};
+
+/* 
+ * Action definition.
+ */
+resource ActionDef (kSDKDefActionResourceID)
+{
+	{
+		kKBSActionComponentBoss, 		// ClassID of boss class that implements the ActionID.
+		kKBSAboutActionID,	// ActionID.
+		kKBSAboutMenuKey,	// Sub-menu string.
+		kOtherActionArea,				// Area name (see ActionDefs.h).
+		kNormalAction,					// Type of action (see ActionDefs.h).
+		kDisableIfLowMem,				// Enabling type (see ActionDefs.h).
+		kInvalidInterfaceID,			// Selection InterfaceID this action cares about or kInvalidInterfaceID.
+		kSDKDefInvisibleInKBSCEditorFlag, // kSDKDefVisibleInKBSCEditorFlag or kSDKDefInvisibleInKBSCEditorFlag.
+
+		kKBSActionComponentBoss,
+		kKBSPopupAboutThisActionID,
+		kSDKDefAboutThisPlugInMenuKey,	// Key to the name of this action
+		kOtherActionArea,
+		kNormalAction,
+		kDisableIfLowMem,
+		kInvalidInterfaceID,
+		kSDKDefInvisibleInKBSCEditorFlag,
+
+		kKBSActionComponentBoss,
+		kKBSSearchBookActionID,
+		kKBSSearchBookMenuKey,			// "Search Book"
+		kOtherActionArea,
+		kNormalAction,
+		kDisableIfLowMem,
+		kInvalidInterfaceID,
+		kSDKDefInvisibleInKBSCEditorFlag,
+
+		kKBSActionComponentBoss,
+		kKBSHidePrevChapterActionID,
+		kKBSHidePrevChapterMenuKey,		// "Hide Previous Chapter" (toggle, check mark)
+		kOtherActionArea,
+		kNormalAction,
+		kCustomEnabling|kDisableIfLowMem,
+		kInvalidInterfaceID,
+		kSDKDefInvisibleInKBSCEditorFlag,
+
+	}
+};
+
+
+/*  
+ * Locale Indicies.
+ * The LocaleIndex should have indicies that point at your
+ * localizations for each language system that you are localized for.
+ */
+
+/*  
+ * String LocaleIndex.
+ */
+resource LocaleIndex ( kSDKDefStringsResourceID)
+{
+	kStringTableRsrcType,
+	{
+		kWildFS, k_enUS, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_enGB, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_deDE, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_frFR, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_esES, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_ptBR, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_svSE, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_daDK, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_nlNL, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_itIT, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_nbNO, kSDKDefStringsResourceID + index_enUS
+		kWildFS, k_fiFI, kSDKDefStringsResourceID + index_enUS
+		kInDesignJapaneseFS, k_jaJP, kSDKDefStringsResourceID + index_jaJP
+	}
+};
+
+resource LocaleIndex (kSDKDefStringsNoTransResourceID)
+{
+	kStringTableRsrcType,
+	{
+		kWildFS, k_Wild, kSDKDefStringsNoTransResourceID + index_enUS
+	}
+};
+
+// Strings not being localized
+resource StringTable (kSDKDefStringsNoTransResourceID + index_enUS)
+{
+	k_enUS,									// Locale Id
+	kEuropeanMacToWinEncodingConverter,		// Character encoding converter
+	{
+		kKBSInternalPopupMenuNameKey,	kKBSInternalPopupMenuNameKey,		// No need to translate, internal menu name.
+	
+	}
+};
+
+/*  
+ * Panel LocaleIndex.
+ */
+resource LocaleIndex (kSDKDefPanelResourceID)
+{
+	kViewRsrcType,
+	{
+		kWildFS, k_Wild, 	kSDKDefPanelResourceID + index_enUS
+	}
+};
+
+/*
+ * LocaleIndex wrappers for the result tree's row resources (Task 2). KBSResultListWidgetMgr
+ * creates these at runtime via RsrcSpec(..., kViewRsrcType, <base RsrcID>); these map that base
+ * ID to the +index_enUS body. The rows carry no localized strings (text is stamped at runtime),
+ * so one wild locale suffices.
+ */
+resource LocaleIndex (kKBSResultChapterNodeWidgetRsrcID)
+{
+	kViewRsrcType,
+	{
+		kWildFS, k_Wild, 	kKBSResultChapterNodeWidgetRsrcID + index_enUS
+	}
+};
+
+resource LocaleIndex (kKBSResultHitNodeWidgetRsrcID)
+{
+	kViewRsrcType,
+	{
+		kWildFS, k_Wild, 	kKBSResultHitNodeWidgetRsrcID + index_enUS
+	}
+};
+
+/*  
+ * Type definition.
+ */
+type KBSPanelWidget(kViewRsrcType) : PalettePanelWidget(ClassID = kKBSPanelWidgetBoss)
+{
+	CPanelMenuData;
+};
+
+/*
+ * Result tree types (Task 2). The list on our tree boss; the row on the STOCK tree node boss
+ * (nothing to replace on it yet - the row-click handler arrives in Task 3), shared by the
+ * chapter and hit row resources; the hit line's colour cell on our generic-panel boss.
+ */
+type KBSResultListWidget(kViewRsrcType) : TreeViewWidget(ClassID = kKBSResultListWidgetBoss)
+{
+};
+
+type KBSResultNodeWidget(kViewRsrcType) : PrimaryResourcePanelWidget(ClassID = kTreeNodeWidgetBoss)
+{
+};
+
+type KBSColorTextWidget(kViewRsrcType) : GenericPanelWidget(ClassID = kKBSColorTextWidgetBoss)
+{
+};
+
+/*  
+ * PanelList definition.
+ */
+resource PanelList (kSDKDefPanelResourceID)
+{
+	{
+		// 1st panel in the list
+		kSDKDefPanelResourceID,		// Resource ID for this panel (use SDK default rsrc ID)
+		kKBSPluginID,			// ID of plug-in that owns this panel
+		kIsResizable,
+		kKBSPanelWidgetActionID,	// Action ID to show/hide the panel
+		"",							// panelName empty: placed via altMenu below (Plug-Ins menu, not Window) - like KESCL/KESCM.
+		kKBSPanelPluginsMenuPath,	// Plug-Ins > KohakuNekotarou > KohakuBookSearch
+		kKBSPanelPluginsMenuPosition,	// Alternate menu position
+		0,0,						// Rsrc ID, Plugin ID for a PNG icon resource to use for this palette
+		c_Panel
+	}
+};
+
+/* 
+ * PanelView definition.
+ * Note: it is not necessary to use EVE for panels.
+ * The view is not currently localised: therefore, it can reside here.
+ * However, if you wish to localise it, it is recommended to locate it in one of
+ * the localised framework resource files (i.e. KBS_enUS.fr etc.).
+ */
+resource KBSPanelWidget(kSDKDefPanelResourceID + index_enUS)
+{
+	__FILE__, __LINE__,					// Localization macro
+	kKBSPanelWidgetID,					// WidgetID
+	kPMRsrcID_None,						// RsrcID
+	kBindNone,							// Binding (0=none)
+	Frame(0, 0, 300, 360),				// Default size (207x32 -> 300x360 with the result tree,
+										// Task 2). Resizable (kIsResizable in PanelList).
+	kTrue, kTrue,						// Visible, Enabled
+	kTrue,								// Erase background (kFalse -> kTrue with the tree)
+	kInterfacePaletteFill,				// Erase to color
+	kFalse,								// Draw dropshadow
+	kKBSPanelTitleKey,					// Panel name
+	{
+		// Status read-out at the top: the search summary (total hits / chapters). Bound to the
+		// top edge so it stays put as the panel resizes.
+		StaticTextWidget
+		(
+			kKBSStaticTextWidgetID,			 // WidgetId
+			kSysStaticTextPMRsrcId,			 // RsrcId
+			kBindLeft | kBindRight | kBindTop, // Frame binding
+			Frame(5, 6, 295, 23),			 // Frame: left, top, right, bottom.
+			kTrue, kTrue,					 // Visible, Enabled
+			kAlignLeft, kEllipsizeEnd, kTrue // Alignment, ellipsize style, convert ampersands
+			kKBSStaticTextKey,				// Initial text.
+			0								// No associated widget
+		),
+
+		// Result tree: chapter -> hit rows, filling the rest of the panel and bound to all four
+		// edges so it grows with the window. Root hidden, single selection, vertical scroll bar
+		// only; scroll increments = one 19px row.
+		KBSResultListWidget
+		(
+			kKBSResultListWidgetID, kPMRsrcID_None,	// WidgetId, RsrcId
+			kBindAll,						// Frame binding: grow with the panel
+			Frame(4, 26, 296, 356),			// Frame (below the status line to the panel's edges)
+			kTrue, kTrue,					// Visible, Enabled
+			kTrue,							// EraseBeforeDraw
+			kInterfacePaletteFill,			// InterfaceColor
+			"",								// Panel name
+			kHideRootNode,					// Options: the root is not a row
+			kFalse,							// Use H scroll bar
+			kTrue,							// Use V scroll bar
+			19,								// fVScrollButtonIncrement (one row)
+			19,								// fVThumbScrollIncrement
+			19,								// fHScrollButtonIncrement (unused, no H bar)
+			19,								// fHThumbScrollIncrement
+			1,								// Items selectable: 1 = single selection
+			kFalse,							// Allow children from multiple parents to be selected
+			kFalse,							// Allow discontiguous selection
+			{
+			},
+		),
+	}
+
+	kKBSInternalPopupMenuNameKey		// Popup menu name (internal)
+};
+
+/*
+ * One CHAPTER row of the result tree, created at runtime by KBSResultListWidgetMgr for chapter
+ * nodes: a stock expander arrow (hidden by the widget manager on a childless chapter - never in
+ * practice) and the chapter's "<name>  (N)" label after the expander's zone. The widget manager
+ * owns the runtime layout; these frames are only the default state.
+ */
+resource KBSResultNodeWidget(kKBSResultChapterNodeWidgetRsrcID + index_enUS)
+{
+	__FILE__, __LINE__,
+	kKBSResultChapterNodeWidgetID, kPMRsrcID_None,	// WidgetId, RsrcId
+	kBindLeft | kBindRight,				// Frame binding: follow the list's width
+	Frame(0, 0, 296, 19),				// Frame (left, top, right, bottom)
+	kTrue, kTrue,						// Visible, Enabled
+	"",									// Panel name
+	{
+		// The expand / collapse arrow (stock part; the tree framework owns its clicks and its
+		// collapsed / expanded state icon). Field-for-field the paneltreeview sample's.
+		TreeExpanderWidget
+		(
+			kTreeNodeExpanderWidgetID,		// WidgetId
+			kTreeBranchCollapsedRsrcID,		// RsrcId for collapsed node icon
+			kApplicationRsrcPluginID,		// RsrcPlugin for collapsed node icon
+			kBindNone,						// Frame binding
+			Frame(2, 1, 18, 17),			// Frame (inside the 19px row)
+			kTrue, kTrue,					// Visible, Enabled
+			kTreeBranchExpandedRsrcID, 		// RsrcId for expanded node icon
+			kApplicationRsrcPluginID,		// RsrcPlugin for expanded node icon
+			kTrue,							// Cmd-Click expands/collapses children
+			kFalse,							// Scroll to show children when expanded
+			kIconNoCentering,
+			kIconRaisedLook,				// Icon look
+			kFalse							// Draws a well
+		),
+
+		InfoStaticTextWidget
+		(
+			kKBSResultChapterLabelWidgetID,	// WidgetId
+			kPMRsrcID_None,					// RsrcId
+			kBindLeft | kBindRight,			// Frame binding: take the rest of the row
+			Frame(18, 1, 292, 17),			// Frame
+			kTrue, kTrue,					// Visible, Enabled
+			kAlignLeft,						// Alignment
+			kEllipsizeEnd, kTrue,			// Ellipsize style, Convert ampersands
+			"",								// Text Control Data
+			0,								// WidgetId for associated control for shortcut focus
+			kPaletteWindowSystemScriptFontId, kPaletteWindowSystemScriptFontId,
+		),
+	}
+};
+
+/*
+ * One HIT row of the result tree: the match's line in the custom multi-colour text cell
+ * (KBSColorTextView highlights the matched part). No expander (a leaf); the widget manager
+ * indents the cell one expander zone deeper than the chapter row's text at apply time, so this
+ * frame is only the default state.
+ */
+resource KBSResultNodeWidget(kKBSResultHitNodeWidgetRsrcID + index_enUS)
+{
+	__FILE__, __LINE__,
+	kKBSResultHitNodeWidgetID, kPMRsrcID_None,	// WidgetId, RsrcId
+	kBindLeft | kBindRight,				// Frame binding: follow the list's width
+	Frame(0, 0, 296, 19),				// Frame (left, top, right, bottom)
+	kTrue, kTrue,						// Visible, Enabled
+	"",									// Panel name
+	{
+		KBSColorTextWidget
+		(
+			kKBSResultTextWidgetID, kPMRsrcID_None,	// WidgetId, RsrcId
+			kBindLeft | kBindRight,			// Frame binding: take the rest of the row
+			Frame(34, 1, 292, 17),			// Frame (indented; the widget manager re-places it)
+			kTrue, kTrue,					// Visible, Enabled
+			"",								// Panel name
+			{
+			}
+		),
+	}
+};
+
+#endif // __ODFRC__
+
+#include "KBS_enUS.fr"
+#include "KBS_jaJP.fr"
