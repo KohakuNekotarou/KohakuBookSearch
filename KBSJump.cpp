@@ -47,6 +47,7 @@
 #include "ErrorUtils.h"				// PMSetGlobalErrorCode
 #include "CmdUtils.h"
 #include "PersistUtils.h"			// ::GetUIDRef
+#include "TransformUtils.h"			// ::InnerToPasteboardMatrix
 #include "IDataBase.h"				// SaveRestoreModifiedState
 #include "UIDList.h"
 #include "Utils.h"
@@ -100,6 +101,56 @@ namespace
 		if (pl == nil)
 			return false;
 		return (pl->GetParcelFrameUID(key) == kInvalidUID);
+	}
+
+	// Pasteboard marker rectangle for an OVERSET position: InDesign has no public API for the red
+	// "+" overset locator, so we approximate it - the "+" sits at the outport (bottom-right, for
+	// horizontal text) of the last frame the thread is placed in. Walk the parcel list of the
+	// thread 'pos' composes into backward from the end to the last parcel that actually has a frame
+	// (an overset parcel reports kInvalidUID), take its bottom-right corner, and carry it through the
+	// parcel->frame and frame->pasteboard matrices. Returns a small square centred on that point, or
+	// false if the whole thread is unplaced (no frame at all). Vertical text would want the bottom-
+	// LEFT corner; horizontal is handled first (see kbs-overset-jump-resume).
+	bool ComputeOversetIndicatorRect(const UIDRef& storyRef, TextIndex pos, PMRect& outPbRect)
+	{
+		InterfacePtr<ITextModel> textModel(storyRef, UseDefaultIID());
+		if (textModel == nil)
+			return false;
+		IDataBase* db = storyRef.GetDataBase();
+		if (db == nil)
+			return false;
+
+		InterfacePtr<ITextParcelList> tpl(textModel->QueryTextParcelList(pos));
+		if (tpl == nil)
+			return false;
+		InterfacePtr<IParcelList> pl(tpl, UseDefaultIID());
+		if (pl == nil)
+			return false;
+
+		for (ParcelKey k = pl->GetLastParcelKey(); k.IsValid(); k = pl->GetPreviousParcelKey(k))
+		{
+			const UID frameUID = pl->GetParcelFrameUID(k);
+			if (frameUID == kInvalidUID)
+				continue;	// this fragment is itself overset - keep walking toward the placed part
+
+			InterfacePtr<IGeometry> frameGeo(db, frameUID, UseDefaultIID());
+			if (frameGeo == nil)
+				continue;
+
+			const PMRect  parcelBounds  = pl->GetParcelBounds(k);			// parcel-local
+			const PMMatrix toFrame      = pl->GetParcelToFrameMatrix(k);		// parcel -> text-frame inner
+			const PMMatrix toPasteboard = ::InnerToPasteboardMatrix(frameGeo);	// frame inner -> pasteboard
+
+			PMPoint corner(parcelBounds.Right(), parcelBounds.Bottom());		// outport corner (horizontal text)
+			toFrame.Transform(&corner);
+			toPasteboard.Transform(&corner);
+
+			const PMReal kHalf(6.0);	// ~12pt square marker centred on the "+" locator
+			outPbRect = PMRect(corner.X() - kHalf, corner.Y() - kHalf,
+							   corner.X() + kHalf, corner.Y() + kHalf);
+			return true;
+		}
+		return false;	// nothing placed anywhere - no page location to point at
 	}
 
 	// x (in the wax run's local coords) and the run's to-pasteboard matrix for a text offset within
@@ -346,22 +397,24 @@ void KBSJump::JumpToHit(int32 chapterIdx, int32 hitIdx)
 	if (gHidePrevChapterOn)
 		KBSBookScope::CloseDisplayedDocsIfClean(docRef);
 
-	// Overset text has no location on any page, so we cannot scroll to it or mark it (the overset
-	// "+" locator is Task 4). Only a visible match moves the view and gets a marker rectangle.
-	if (!overset)
+	// A visible match scrolls to its wax rectangle AND gets a red marker rectangle. An overset match
+	// has no wax line, so it scrolls to the red "+" overset locator (the outport of the last placed
+	// frame) but is NOT marked - the pixels there belong to the "+" indicator, not the text, so a
+	// rectangle would only clutter it. If neither geometry can be produced, just clear.
+	PMRect pbRect;
+	const bool haveRect = overset
+		? ComputeOversetIndicatorRect(storyRef, start, pbRect)
+		: GetFirstChunkPasteboardRect(storyRef, start, end, pbRect);
+
+	if (haveRect)
 	{
-		PMRect pbRect;
-		if (GetFirstChunkPasteboardRect(storyRef, start, end, pbRect))
-		{
-			ScrollFrontViewToPoint(PBPMPoint(
-				(pbRect.Left() + pbRect.Right()) / PMReal(2.0),
-				(pbRect.Top() + pbRect.Bottom()) / PMReal(2.0)));
-			KBSDrawEventHandler::SetMarker(db, pbRect);
-		}
+		ScrollFrontViewToPoint(PBPMPoint(
+			(pbRect.Left() + pbRect.Right()) / PMReal(2.0),
+			(pbRect.Top() + pbRect.Bottom()) / PMReal(2.0)));
+		if (overset)
+			KBSDrawEventHandler::ClearMarker();	// scroll only - no rectangle on the "+" locator
 		else
-		{
-			KBSDrawEventHandler::ClearMarker();
-		}
+			KBSDrawEventHandler::SetMarker(db, pbRect);
 	}
 	else
 	{
