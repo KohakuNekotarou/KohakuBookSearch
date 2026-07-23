@@ -249,4 +249,28 @@ void KBSResultTree::Rebuild()
 		treeMgr->ExpandNode(KBSResultNodeID::Create(c), kFalse);
 }
 
+//----------------------------------------------------------------------------------------
+// KBSResultTree::ShowStatus - write the panel's single-line status read-out
+//----------------------------------------------------------------------------------------
+
+void KBSResultTree::ShowStatus(const PMString& message)
+{
+	// Reach the status text through the panel; nil when the panel is closed (do nothing then) - the
+	// same reach Rebuild uses, which is why this lives here rather than in the action component.
+	InterfacePtr<IPanelControlData> panelData(Utils<IPalettePanelUtils>()->QueryPanelByWidgetID(kKBSPanelWidgetID));
+	if (panelData == nil)
+		return;
+	IControlView* textView = panelData->FindWidget(kKBSStaticTextWidgetID);
+	if (textView == nil)
+		return;
+	InterfacePtr<ITextControlData> textData(textView, UseDefaultIID());
+	if (textData == nil)
+		return;
+	// A single-line StaticText does not repaint on SetString alone, so invalidate + force a redraw
+	// (the SDK immediate-StaticText-update rule).
+	textData->SetString(message, kTrue /*invalidate*/, kFalse /*don't notify*/);
+	textView->Invalidate();
+	textView->ForceRedraw();
+}
+
 // End, KBSResultListWidgetMgr.cpp.

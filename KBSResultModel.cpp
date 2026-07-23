@@ -40,6 +40,11 @@ void KBSResultModel::SetResults(const std::vector<Chapter>& chapters)
 	gChapters = chapters;
 }
 
+void KBSResultModel::AppendChapter(const Chapter& chapter)
+{
+	gChapters.push_back(chapter);
+}
+
 void KBSResultModel::Clear()
 {
 	gChapters.clear();

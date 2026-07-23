@@ -65,6 +65,11 @@ namespace KBSResultModel
 	/** Replace the whole model with a fresh search's chapters (only chapters with >=1 hit). */
 	void SetResults(const std::vector<Chapter>& chapters);
 
+	/** Append one chapter to the model. The progressive search adds chapters one at a time as each
+	    finishes (after Clear), instead of one SetResults at the end. Only chapters with >=1 hit
+	    should be appended (empty branches are never shown). */
+	void AppendChapter(const Chapter& chapter);
+
 	/** Forget the results (an empty search, or a teardown that still wants the tree emptied). */
 	void Clear();
 

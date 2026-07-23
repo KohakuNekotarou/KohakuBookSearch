@@ -25,12 +25,6 @@
 
 // Interface includes:
 
-// Interface includes:
-#include "IPalettePanelUtils.h"	// QueryPanelByWidgetID - reach the panel's status text
-#include "IPanelControlData.h"	// FindWidget
-#include "IControlView.h"		// Invalidate / ForceRedraw
-#include "ITextControlData.h"	// SetString
-
 // General includes:
 #include "CActionComponent.h"
 #include "CAlert.h"
@@ -90,27 +84,6 @@ public:
 */
 CREATE_PMINTERFACE(KBSActionComponent, kKBSActionComponentImpl)
 
-/* ShowStatus
-	Write a one-line message to the panel's status read-out. A single-line StaticText does not
-	repaint on SetString alone, so invalidate + force a redraw (see the SDK note on immediate
-	StaticText updates). No-op when the panel is not open.
-*/
-static void ShowStatus(const PMString& message)
-{
-	InterfacePtr<IPanelControlData> panelData(Utils<IPalettePanelUtils>()->QueryPanelByWidgetID(kKBSPanelWidgetID));
-	if (panelData == nil)
-		return;
-	IControlView* textView = panelData->FindWidget(kKBSStaticTextWidgetID);
-	if (textView == nil)
-		return;
-	InterfacePtr<ITextControlData> textData(textView, UseDefaultIID());
-	if (textData == nil)
-		return;
-	textData->SetString(message, kTrue /*invalidate*/, kFalse /*don't notify*/);
-	textView->Invalidate();
-	textView->ForceRedraw();
-}
-
 /* KBSActionComponent Constructor
 */
 KBSActionComponent::KBSActionComponent(IPMUnknown* boss)
@@ -136,11 +109,12 @@ void KBSActionComponent::DoAction(IActiveContext* ac, ActionID actionID, GSysPoi
 		{
 			// Search the active book (or the front document) with the user's current
 			// Find/Change query. The engine fills KBSResultModel with the hits (grouped by
-			// chapter); rebuild the result tree from it, and show the summary on the status line.
+			// chapter) and, as it goes, grows the tree chapter by chapter; here we do the final
+			// authoritative rebuild and show the closing summary on the status line.
 			PMString summary;
 			KBSSearchEngine::SearchBook(summary);
 			KBSResultTree::Rebuild();
-			ShowStatus(summary);
+			KBSResultTree::ShowStatus(summary);
 			break;
 		}
 

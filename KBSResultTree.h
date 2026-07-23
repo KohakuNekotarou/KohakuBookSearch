@@ -15,11 +15,18 @@
 #ifndef __KBSResultTree_h__
 #define __KBSResultTree_h__
 
+#include "PMString.h"
+
 namespace KBSResultTree
 {
 	/** (Re)load the panel's result tree from KBSResultModel and expand every chapter. Safe to
 	    call when the panel is closed (does nothing then). */
 	void Rebuild();
+
+	/** Write a one-line message to the panel's status read-out (its single-line StaticText). Safe
+	    to call when the panel is closed (does nothing then). Lives with the tree because it reaches
+	    the panel exactly the way Rebuild does. */
+	void ShowStatus(const PMString& message);
 }
 
 #endif // __KBSResultTree_h__
