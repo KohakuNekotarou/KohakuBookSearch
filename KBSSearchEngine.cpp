@@ -62,6 +62,7 @@
 #include "KBSSearchEngine.h"
 #include "KBSBookScope.h"
 #include "KBSResultModel.h"
+#include "KBSResultTree.h"		// grow the tree / status chapter by chapter as the search runs
 
 namespace
 {
@@ -386,9 +387,11 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 		targets.push_back(single);
 	}
 
-	// Walk every target; only chapters that hold a hit go into the model (no empty branches).
-	std::vector<KBSResultModel::Chapter> chapters;
+	// Walk every target; only chapters that hold a hit go into the model (no empty branches). The
+	// model was cleared above; each chapter is APPENDED as it finishes and the panel is refreshed
+	// right then, so the tree grows chapter by chapter instead of appearing all at once at the end.
 	int32 total = 0;
+	int32 chaptersWithHits = 0;
 	bool collectionTruncated = false;
 	for (size_t i = 0; i < targets.size(); ++i)
 	{
@@ -409,7 +412,9 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 		if (hits.empty())
 			continue;
 
-		// Page-order the hits and bake the "P<page>(<n>) " locator onto each line.
+		// Page-order the hits and bake the "P<page>(<n>) " locator onto each line. This needs the
+		// WHOLE chapter's hits (page order and the within-page ordinal are only known once the
+		// chapter is complete), which is why the flush unit is the chapter, not a fixed hit count.
 		FinalizeChapterHits(hits);
 
 		KBSResultModel::Chapter chapter;
@@ -418,11 +423,33 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 		chapter.docRef = targets[i].docRef;
 		chapter.file = targets[i].file;
 		chapter.hits.swap(hits);
-		total += static_cast<int32>(chapter.hits.size());
-		chapters.push_back(chapter);
-	}
+		const int32 chapterHitCount = static_cast<int32>(chapter.hits.size());
+		const int32 hitsBeforeThisChapter = total;	// hits already in the model before this chapter
+		total += chapterHitCount;
+		++chaptersWithHits;
 
-	KBSResultModel::SetResults(chapters);
+		// Progressive display. The chapter loop is a safe place to touch the UI: CollectHitsInDoc
+		// halted the text walker before returning, so nothing is mid-walk here.
+		KBSResultModel::AppendChapter(chapter);
+
+		// Running status ("... N hit(s) so far in M chapter(s) ..."). The count leads, so it stays
+		// visible even when the narrow single-line status field truncates the tail.
+		PMString progress;
+		progress.SetTranslatable(kFalse);
+		progress.Append("Searching... ");
+		progress.AppendNumber(total);
+		progress.Append(" hit(s) so far in ");
+		progress.AppendNumber(chaptersWithHits);
+		progress.Append(" chapter(s)...");
+		KBSResultTree::ShowStatus(progress);
+
+		// Rebuild only while the display cap still has room for this chapter: if the hits BEFORE it
+		// already reach the cap, this chapter is entirely off-screen, so the visible tree cannot
+		// change - skip the work. The boundary chapter (hits-before < cap <= hits-after) still
+		// rebuilds, so its "(shown / total)" label is drawn.
+		if (hitsBeforeThisChapter < KBSResultModel::kKBSDisplayHitLimit)
+			KBSResultTree::Rebuild();
+	}
 
 	// Task 3: the windowless chapters stay HELD so a hit-row jump can reach them without a
 	// document load. They are released only when a DIFFERENT book is searched (KBSBookScope's
@@ -451,7 +478,7 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 	outSummary.Append(" hit(s)");
 	if (fromBook)
 	{
-		PMString chapStr;	chapStr.AppendNumber(static_cast<int32>(chapters.size()));
+		PMString chapStr;	chapStr.AppendNumber(chaptersWithHits);
 		outSummary.Append(" in ");
 		outSummary.Append(chapStr);
 		outSummary.Append(" chapter(s) - book \"");
