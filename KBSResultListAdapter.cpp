@@ -54,8 +54,8 @@ public:
 		if (nodeID == nil || nodeID->IsHitRow())
 			return 0;	// hit rows are the leaves
 		if (nodeID->GetChapter() < 0)
-			return KBSResultModel::GetChapterCount();
-		return KBSResultModel::GetHitCount(nodeID->GetChapter());
+			return KBSResultModel::GetDisplayChapterCount();
+		return KBSResultModel::GetDisplayHitCount(nodeID->GetChapter());
 	}
 
 	virtual NodeID_rv GetNthChild(const NodeID& node, const int32& nth) const
@@ -65,11 +65,11 @@ public:
 			return kInvalidNodeID;
 		if (nodeID->GetChapter() < 0)
 		{
-			if (nth < 0 || nth >= KBSResultModel::GetChapterCount())
+			if (nth < 0 || nth >= KBSResultModel::GetDisplayChapterCount())
 				return kInvalidNodeID;
 			return KBSResultNodeID::Create(nth);
 		}
-		if (nth < 0 || nth >= KBSResultModel::GetHitCount(nodeID->GetChapter()))
+		if (nth < 0 || nth >= KBSResultModel::GetDisplayHitCount(nodeID->GetChapter()))
 			return kInvalidNodeID;
 		return KBSResultNodeID::Create(nodeID->GetChapter(), nth);
 	}

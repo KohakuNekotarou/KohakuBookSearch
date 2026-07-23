@@ -28,6 +28,11 @@
 
 namespace KBSResultModel
 {
+	/** The panel shows at most this many hit rows (book order). The model still HOLDS every hit -
+	    a same-book re-search reuses them, and a future export / replace consumes them ALL - only
+	    the tree display is capped, to keep a huge result set from flooding the panel. */
+	const int32 kKBSDisplayHitLimit = 500;
+
 	/** One match on one line of one chapter. The three text segments are the line split around
 	    the match; the jump anchors (Task 3) point back at the exact occurrence. */
 	struct Hit
@@ -66,11 +71,23 @@ namespace KBSResultModel
 	/** Application-shutdown cleanup: release the vectors' storage, no UI. */
 	void ShutdownCleanup();
 
-	/** The number of chapters currently displayed (the tree root's child count). */
+	/** The number of chapters that hold a hit (uncapped; every chapter with >=1 hit). */
 	int32 GetChapterCount();
 
-	/** The number of hits under chapter 'chapterIdx' (that chapter node's child count). */
+	/** The number of hits under chapter 'chapterIdx' (uncapped, the full stored count). */
 	int32 GetHitCount(int32 chapterIdx);
+
+	/** The total number of hits across ALL chapters (uncapped) - for the status summary and a
+	    future export. */
+	int32 GetTotalHitCount();
+
+	/** The number of chapters that have at least one DISPLAYED hit (the tree root's child count
+	    under the display cap). Chapters past the cap are not shown. */
+	int32 GetDisplayChapterCount();
+
+	/** The number of hits DISPLAYED under chapter 'chapterIdx' - capped in book order so the whole
+	    tree shows at most kKBSDisplayHitLimit hit rows. The chapter still STORES every hit. */
+	int32 GetDisplayHitCount(int32 chapterIdx);
 
 	/** A chapter node's display: its name and its hit count. false = index out of range. */
 	bool GetChapterDisplay(int32 chapterIdx, PMString& outName, int32& outHitCount);

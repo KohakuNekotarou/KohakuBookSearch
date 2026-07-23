@@ -13,7 +13,10 @@
 //  AGMGraphicsContext + StringUtils::PMDrawString / PMDrawStringRGB, the palette font from
 //  IInterfaceFonts, the baseline from IWidgetUtils::GetViewYPosition. convertAmpersand is kFalse
 //  on BOTH the draw and the measure so a literal '&' in the search text is neither underlined
-//  nor dropped. Long lines clip at the cell's right edge for now (ellipsis is Task 4 polish).
+//  nor dropped. When a line overflows the cell the match is kept at full strength and the context
+//  is ellipsized around it (the stock rows ellipsize automatically; this custom cell does it by
+//  hand): the leading context loses its HEAD (kEllipsizeBeginning, so the words just before the
+//  match survive with a leading "..."), the trailing context loses its TAIL (kEllipsizeEnd).
 //
 //========================================================================================
 
@@ -29,7 +32,8 @@
 #include "AutoGSave.h"
 #include "CPMUnknown.h"
 #include "DVControlView.h"
-#include "DrawStringUtils.h"	// StringUtils::PMDrawString / PMDrawStringRGB / PMMeasureString
+#include "DrawStringUtils.h"	// StringUtils::PMDrawString / PMDrawStringRGB / PMMeasureString / PMEllipsizeString
+#include "WidgetDefs.h"			// EllipsizeStyle (kEllipsizeBeginning / kEllipsizeEnd)
 #include "ISession.h"			// GetExecutionContextSession
 #include "IWidgetUtils.h"		// GetViewYPosition
 #include "ShuksanID.h"			// kPaletteWindowFontId
@@ -164,22 +168,61 @@ void KBSColorTextView::Draw(IViewPort* viewPort, SysRgn updateRgn)
 			x = locatorEnd + kMinGap;
 	}
 
-	// The line, left to right. convertAmpersand=kFalse on draw AND measure. A run whose start is
-	// already past the cell's right edge is skipped (the earlier runs consumed the width). The
-	// matched run is the full theme text colour; the context runs are faded.
-	if (!pre.IsEmpty() && x < rightEdge)
+	// The line, left to right. convertAmpersand=kFalse on draw AND measure so a literal '&' is
+	// neither underlined nor dropped. If the whole line fits it is drawn as-is; when it overflows
+	// the match is kept at full strength and the context is ellipsized around it. The matched run
+	// is the full theme text colour; the context runs are faded.
+	const PMReal availWidth = rightEdge - x;
+	if (availWidth <= PMReal(0.0))
+		return;		// the locator consumed the cell; no room left for the line
+
+	// Draw one run at the running x and advance past it (an empty run is a no-op).
+	auto drawRun = [&](const PMString& s, const RealAGMColor& c)
 	{
-		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), pre, fontInfo, kContextColor, kFalse, kFalse);
-		x += StringUtils::PMMeasureString(&gc, pre, fontInfo, kFalse).X();
+		if (s.IsEmpty())
+			return;
+		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), s, fontInfo, c, kFalse, kFalse);
+		x += StringUtils::PMMeasureString(&gc, s, fontInfo, kFalse).X();
+	};
+
+	const PMReal preW   = pre.IsEmpty()   ? PMReal(0.0) : StringUtils::PMMeasureString(&gc, pre,   fontInfo, kFalse).X();
+	const PMReal matchW = match.IsEmpty() ? PMReal(0.0) : StringUtils::PMMeasureString(&gc, match, fontInfo, kFalse).X();
+	const PMReal postW  = post.IsEmpty()  ? PMReal(0.0) : StringUtils::PMMeasureString(&gc, post,  fontInfo, kFalse).X();
+
+	if (preW + matchW + postW <= availWidth)
+	{
+		// The whole line fits: draw the three runs unchanged.
+		drawRun(pre, kContextColor);
+		drawRun(match, kFullColor);
+		drawRun(post, kContextColor);
 	}
-	if (!match.IsEmpty() && x < rightEdge)
+	else if (matchW >= availWidth)
 	{
-		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), match, fontInfo, kFullColor, kFalse, kFalse);
-		x += StringUtils::PMMeasureString(&gc, match, fontInfo, kFalse).X();
+		// The match alone overflows the cell: ellipsize the match itself (tail) and drop the context.
+		const PMString m = StringUtils::PMEllipsizeString(&gc, availWidth, match, fontInfo, kEllipsizeEnd, nil, kFalse);
+		drawRun(m, kFullColor);
 	}
-	if (!post.IsEmpty() && x < rightEdge)
+	else
 	{
-		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), post, fontInfo, kContextColor, kFalse, kFalse);
+		// The match fits but the whole line does not: keep the match at full strength and show as
+		// much context as fits around it. The LEADING context loses its head (kEllipsizeBeginning,
+		// so the words just before the match survive with a leading "..."); the TRAILING context
+		// loses its tail (kEllipsizeEnd). Leading context is served first, so the run-up to the
+		// match is preferred over what follows it.
+		const PMReal rem = availWidth - matchW;
+		PMString preCut = pre;
+		if (!pre.IsEmpty())
+			preCut = StringUtils::PMEllipsizeString(&gc, rem, pre, fontInfo, kEllipsizeBeginning, nil, kFalse);
+		const PMReal preCutW = preCut.IsEmpty() ? PMReal(0.0) : StringUtils::PMMeasureString(&gc, preCut, fontInfo, kFalse).X();
+
+		const PMReal postBudget = rem - preCutW;
+		PMString postCut;
+		if (!post.IsEmpty() && postBudget > PMReal(0.0))
+			postCut = StringUtils::PMEllipsizeString(&gc, postBudget, post, fontInfo, kEllipsizeEnd, nil, kFalse);
+
+		drawRun(preCut, kContextColor);
+		drawRun(match, kFullColor);
+		drawRun(postCut, kContextColor);
 	}
 }
 

@@ -137,9 +137,10 @@ private:
 		IControlView* widget, const InterfacePtr<IPanelControlData>& rowData) const
 	{
 		PMString name;
-		int32 hitCount = 0;
-		if (!KBSResultModel::GetChapterDisplay(nodeID->GetChapter(), name, hitCount))
+		int32 fullCount = 0;
+		if (!KBSResultModel::GetChapterDisplay(nodeID->GetChapter(), name, fullCount))
 			return;
+		const int32 shownCount = KBSResultModel::GetDisplayHitCount(nodeID->GetChapter());
 
 		// The expander arrow: visible exactly when the row has children. Hide-only would still
 		// leave a click target (the stacked-widget lesson), so the hidden arrow is disabled too.
@@ -161,11 +162,22 @@ private:
 			}
 		}
 
-		// "<name>  (N)": the hit count in parentheses after the chapter name.
+		// "<name>  (N)", or "<name>  (shown / total)" for the one boundary chapter the display cap
+		// splits. The panel shows the first kKBSDisplayHitLimit hits book-wide; the rest stay in the
+		// model for a future export, so the boundary chapter shows how many of its hits are on screen.
 		PMString label(name);
 		label.SetTranslatable(kFalse);
 		label.Append("  (");
-		label.AppendNumber(hitCount);
+		if (shownCount < fullCount)
+		{
+			label.AppendNumber(shownCount);
+			label.Append(" / ");
+			label.AppendNumber(fullCount);
+		}
+		else
+		{
+			label.AppendNumber(fullCount);
+		}
 		label.Append(")");
 		SetColumnText(rowData, kKBSResultChapterLabelWidgetID, label);
 	}
@@ -232,7 +244,7 @@ void KBSResultTree::Rebuild()
 	// children were never materialized, and expanding materializes them (the "no expander arrow"
 	// fix, KESCL/paneltreeview). A chapter with no hits is not in the model, so every chapter
 	// node here has children.
-	const int32 chapters = KBSResultModel::GetChapterCount();
+	const int32 chapters = KBSResultModel::GetDisplayChapterCount();
 	for (int32 c = 0; c < chapters; ++c)
 		treeMgr->ExpandNode(KBSResultNodeID::Create(c), kFalse);
 }

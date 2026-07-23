@@ -21,6 +21,18 @@
 namespace
 {
 	std::vector<KBSResultModel::Chapter> gChapters;
+
+	// Hits stored in the chapters BEFORE 'chapterIdx' (book order). The display cap is applied in
+	// book order, and every chapter before the boundary chapter is shown in full, so counting full
+	// hits here is the budget consumed before this chapter.
+	int32 HitsBeforeChapter(int32 chapterIdx)
+	{
+		int32 sum = 0;
+		const int32 n = static_cast<int32>(gChapters.size());
+		for (int32 i = 0; i < chapterIdx && i < n; ++i)
+			sum += static_cast<int32>(gChapters[i].hits.size());
+		return sum;
+	}
 }
 
 void KBSResultModel::SetResults(const std::vector<Chapter>& chapters)
@@ -50,6 +62,42 @@ int32 KBSResultModel::GetHitCount(int32 chapterIdx)
 	if (chapterIdx < 0 || chapterIdx >= static_cast<int32>(gChapters.size()))
 		return 0;
 	return static_cast<int32>(gChapters[chapterIdx].hits.size());
+}
+
+int32 KBSResultModel::GetTotalHitCount()
+{
+	int32 total = 0;
+	for (size_t i = 0; i < gChapters.size(); ++i)
+		total += static_cast<int32>(gChapters[i].hits.size());
+	return total;
+}
+
+int32 KBSResultModel::GetDisplayChapterCount()
+{
+	// The displayed chapters are the book-order prefix whose hits fit under the cap: a chapter is
+	// shown when the hits before it have not already used up the whole budget.
+	int32 before = 0;
+	int32 shown = 0;
+	for (size_t i = 0; i < gChapters.size(); ++i)
+	{
+		if (before >= kKBSDisplayHitLimit)
+			break;
+		++shown;
+		before += static_cast<int32>(gChapters[i].hits.size());
+	}
+	return shown;
+}
+
+int32 KBSResultModel::GetDisplayHitCount(int32 chapterIdx)
+{
+	if (chapterIdx < 0 || chapterIdx >= static_cast<int32>(gChapters.size()))
+		return 0;
+	const int32 before = HitsBeforeChapter(chapterIdx);
+	if (before >= kKBSDisplayHitLimit)
+		return 0;	// the cap ran out before this chapter
+	const int32 remaining = kKBSDisplayHitLimit - before;
+	const int32 full = static_cast<int32>(gChapters[chapterIdx].hits.size());
+	return (full < remaining) ? full : remaining;
 }
 
 bool KBSResultModel::GetChapterDisplay(int32 chapterIdx, PMString& outName, int32& outHitCount)

@@ -66,6 +66,15 @@
 namespace
 {
 
+// The whole-search safety ceiling: the collector stops after this many hits across ALL chapters,
+// so a huge or match-everywhere query cannot pile up an unbounded result set. Kept deliberately
+// conservative - a small multiple of the panel display cap - so memory stays tiny and the search
+// stays fast. Unlike the panel display cap (KBSResultModel::kKBSDisplayHitLimit) this bounds the
+// RESULT SET itself, so hitting it caps a future export too. A common word in a large book can
+// reach it, and that is intended: the panel shows the first kKBSDisplayHitLimit hits and the
+// summary says to narrow the query.
+const int32 kKBSCollectHitLimit = 5000;
+
 // Is there any text to find on the Find/Change panel right now (in the current mode)?
 bool HasFindQuery()
 {
@@ -182,7 +191,7 @@ void BuildHit(const UIDRef& docRef, const UIDRef& storyRef, TextIndex start, Tex
 // Read-only: the whole walk sits inside a SaveRestoreModifiedState dirty guard, so a windowless
 // chapter can be closed afterwards without wanting a save. NOTHING is set on opts - the walk uses
 // the user's Find/Change settings verbatim, so the search mode (Text or GREP) is followed.
-void CollectHitsInDoc(const UIDRef& docRef, std::vector<KBSResultModel::Hit>& outHits)
+void CollectHitsInDoc(const UIDRef& docRef, size_t maxHits, std::vector<KBSResultModel::Hit>& outHits, bool& outCapped)
 {
 	InterfacePtr<IFindChangeOptions> opts(QuerySessionPreferences<IFindChangeOptions>());
 	if (opts == nil)
@@ -228,7 +237,12 @@ void CollectHitsInDoc(const UIDRef& docRef, std::vector<KBSResultModel::Hit>& ou
 	const TextWalkerSelections_CriticalSection criticalSection(selUtils);
 
 	// Walk the whole document. Each ProcessCommand advances the walker to the next match ("find
-	// next"), so we keep going until no more hits.
+	// next"), so we keep going until no more hits. prev* is a safety net: if the finder ever hands
+	// back the exact same occurrence twice in a row (a query that does not advance the walker, e.g.
+	// a zero-width GREP match), stop this walk rather than spin forever.
+	TextIndex prevStart = kInvalidTextIndex;
+	TextIndex prevEnd   = kInvalidTextIndex;
+	UID       prevStory = kInvalidUID;
 	while (true)
 	{
 		InterfacePtr<ICommand> findCmd(CmdUtils::CreateCommand(kFindTextCmdBoss));
@@ -252,6 +266,21 @@ void CollectHitsInDoc(const UIDRef& docRef, std::vector<KBSResultModel::Hit>& ou
 		TextIndex start = kInvalidTextIndex;
 		TextIndex end = kInvalidTextIndex;
 		UIDRef story = cmdData->GetRange(start, end);
+
+		// No forward progress since the last match: bail out of this walk to avoid a hang.
+		if (story.GetUID() == prevStory && start == prevStart && end == prevEnd)
+			break;
+		prevStory = story.GetUID();
+		prevStart = start;
+		prevEnd   = end;
+
+		// Whole-search safety ceiling reached: stop collecting. More matches may exist, but the
+		// result set is capped so a match-everywhere query cannot grow it without bound.
+		if (outHits.size() >= maxHits)
+		{
+			outCapped = true;
+			break;
+		}
 
 		KBSResultModel::Hit hit;
 		BuildHit(docRef, story, start, end, hit);
@@ -360,10 +389,23 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 	// Walk every target; only chapters that hold a hit go into the model (no empty branches).
 	std::vector<KBSResultModel::Chapter> chapters;
 	int32 total = 0;
+	bool collectionTruncated = false;
 	for (size_t i = 0; i < targets.size(); ++i)
 	{
+		// Room left under the whole-search safety ceiling; once it is gone, stop walking further
+		// chapters too (the result set is full).
+		const int32 remaining = kKBSCollectHitLimit - total;
+		if (remaining <= 0)
+		{
+			collectionTruncated = true;
+			break;
+		}
+
 		std::vector<KBSResultModel::Hit> hits;
-		CollectHitsInDoc(targets[i].docRef, hits);
+		bool docCapped = false;
+		CollectHitsInDoc(targets[i].docRef, static_cast<size_t>(remaining), hits, docCapped);
+		if (docCapped)
+			collectionTruncated = true;
 		if (hits.empty())
 			continue;
 
@@ -386,6 +428,23 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 	// document load. They are released only when a DIFFERENT book is searched (KBSBookScope's
 	// book-switch guard) or at shutdown - a same-book re-search reuses them.
 
+	// No matches: a plain, friendly line rather than "0 hit(s) in 0 chapter(s)".
+	if (total == 0)
+	{
+		outSummary.Append("No matches");
+		if (fromBook)
+		{
+			outSummary.Append(" in book \"");
+			outSummary.Append(bookName);
+			outSummary.Append("\".");
+		}
+		else
+		{
+			outSummary.Append(" in the front document.");
+		}
+		return 0;
+	}
+
 	// The one-line summary. The hit count leads, so it stays visible even when the narrow
 	// single-line status field truncates the tail.
 	outSummary.AppendNumber(total);
@@ -402,6 +461,25 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 	else
 	{
 		outSummary.Append(" - front document (no active book).");
+	}
+
+	// Two separate caps can bite:
+	//   * collectionTruncated: the whole-search safety ceiling stopped collection, so the RESULT SET
+	//     itself is capped (a future export would be incomplete too) - the strong "narrow it" note.
+	//   * total > display limit: every hit is stored, but the panel shows only the first N rows.
+	if (collectionTruncated)
+	{
+		outSummary.Append(" Stopped at the ");
+		outSummary.AppendNumber(kKBSCollectHitLimit);
+		outSummary.Append(" safety limit - narrow your search. Showing first ");
+		outSummary.AppendNumber(KBSResultModel::kKBSDisplayHitLimit);
+		outSummary.Append(" in the panel.");
+	}
+	else if (total > KBSResultModel::kKBSDisplayHitLimit)
+	{
+		outSummary.Append(" Showing first ");
+		outSummary.AppendNumber(KBSResultModel::kKBSDisplayHitLimit);
+		outSummary.Append(" in the panel.");
 	}
 	return total;
 }
