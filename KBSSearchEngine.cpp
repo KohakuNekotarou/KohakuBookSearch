@@ -309,13 +309,9 @@ void FinalizeChapterHits(std::vector<KBSResultModel::Hit>& hits)
 					locator.Append(")");
 				}
 			}
-			locator.Append(" ");
-
-			// Prepend the locator to the line's leading segment (normal colour).
-			PMString newPre(locator);
-			newPre.Append(hits[k].preText);
-			newPre.SetTranslatable(kFalse);
-			hits[k].preText = newPre;
+			// The locator is its own part now (drawn at full colour, then a tab stop before the
+			// line text) - the colour cell keeps it separate from the faded line segments.
+			hits[k].locator = locator;
 		}
 		i = j;
 	}
@@ -370,6 +366,9 @@ int32 KBSSearchEngine::SearchBook(PMString& outSummary)
 		CollectHitsInDoc(targets[i].docRef, hits);
 		if (hits.empty())
 			continue;
+
+		// Page-order the hits and bake the "P<page>(<n>) " locator onto each line.
+		FinalizeChapterHits(hits);
 
 		KBSResultModel::Chapter chapter;
 		chapter.name = targets[i].shortName;

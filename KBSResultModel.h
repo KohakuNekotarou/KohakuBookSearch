@@ -32,9 +32,10 @@ namespace KBSResultModel
 	    the match; the jump anchors (Task 3) point back at the exact occurrence. */
 	struct Hit
 	{
-		PMString	preText;	// the line's text before the match (the "P<page>(<n>) " locator is
-								// baked onto its front by the engine, drawn in the normal colour)
-		PMString	matchText;	// the matched text (drawn in the highlight colour)
+		PMString	locator;	// the page locator "P<page>(<n>)" / "ov" (drawn at full text colour,
+								// followed by a tab stop, ahead of the line)
+		PMString	preText;	// the line's text before the match
+		PMString	matchText;	// the matched text (drawn at full text colour)
 		PMString	postText;	// the line's text after the match
 
 		PMString	pageString;	// the match's page, Pages-panel style ("" = overset, no page)
@@ -74,9 +75,10 @@ namespace KBSResultModel
 	/** A chapter node's display: its name and its hit count. false = index out of range. */
 	bool GetChapterDisplay(int32 chapterIdx, PMString& outName, int32& outHitCount);
 
-	/** A hit node's display: the three text segments to paint. false = index out of range. */
+	/** A hit node's display: the page locator and the three line segments to paint. false = index
+	    out of range. */
 	bool GetHitDisplay(int32 chapterIdx, int32 hitIdx,
-		PMString& outPre, PMString& outMatch, PMString& outPost);
+		PMString& outLocator, PMString& outPre, PMString& outMatch, PMString& outPost);
 
 	/** A hit's jump anchors (Task 3): the chapter's document / file and the match's story +
 	    text range. false = index out of range. */

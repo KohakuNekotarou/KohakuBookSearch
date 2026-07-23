@@ -175,8 +175,8 @@ private:
 	void ApplyHitRow(const TreeNodePtr<KBSResultNodeID>& nodeID, IControlView* widget,
 		const InterfacePtr<IPanelControlData>& rowData) const
 	{
-		PMString pre, match, post;
-		if (!KBSResultModel::GetHitDisplay(nodeID->GetChapter(), nodeID->GetHit(), pre, match, post))
+		PMString locator, pre, match, post;
+		if (!KBSResultModel::GetHitDisplay(nodeID->GetChapter(), nodeID->GetHit(), locator, pre, match, post))
 			return;
 
 		// Draw our own indent: the hit cell steps one expander zone right of the chapter row's
@@ -196,7 +196,7 @@ private:
 			// draws the row right after.
 			InterfacePtr<IKBSRowData> data(cell, UseDefaultIID());
 			if (data != nil)
-				data->SetSegments(pre, match, post);
+				data->SetSegments(locator, pre, match, post);
 			cell->Invalidate();
 		}
 	}

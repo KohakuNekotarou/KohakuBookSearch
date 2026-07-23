@@ -21,19 +21,20 @@
 #include "PMString.h"
 #include "KBSID.h"
 
-/** The three text segments a hit row's colour cell paints: the text before the match, the
-    matched text (highlighted), and the text after. Set by the widget manager on every apply,
-    read by KBSColorTextView::Draw. Non-persistent (rebuilt on every search). */
+/** The parts a hit row's colour cell paints: the page LOCATOR ("P1(2)", drawn at the full theme
+    text colour and followed by a tab-stop gap), then the line split around the match - the text
+    before it, the matched text (full colour), and the text after (before/after are drawn faded).
+    Set by the widget manager on every apply, read by KBSColorTextView::Draw. Non-persistent. */
 class IKBSRowData : public IPMUnknown
 {
 public:
 	enum { kDefaultIID = IID_IKBSROWDATA };
 
-	/** Replace this row's three text segments (any may be empty). */
-	virtual void SetSegments(const PMString& pre, const PMString& match, const PMString& post) = 0;
+	/** Replace this row's parts: the page locator and the three line segments (any may be empty). */
+	virtual void SetSegments(const PMString& locator, const PMString& pre, const PMString& match, const PMString& post) = 0;
 
-	/** Read this row's three text segments back (for the cell's Draw). */
-	virtual void GetSegments(PMString& outPre, PMString& outMatch, PMString& outPost) const = 0;
+	/** Read this row's parts back (for the cell's Draw). */
+	virtual void GetSegments(PMString& outLocator, PMString& outPre, PMString& outMatch, PMString& outPost) const = 0;
 };
 
 #endif // __KBSColorTextView_h__

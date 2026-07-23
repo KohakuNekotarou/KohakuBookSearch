@@ -62,21 +62,24 @@ public:
 	KBSRowData(IPMUnknown* boss) : CPMUnknown<IKBSRowData>(boss) {}
 	virtual ~KBSRowData() {}
 
-	virtual void SetSegments(const PMString& pre, const PMString& match, const PMString& post)
+	virtual void SetSegments(const PMString& locator, const PMString& pre, const PMString& match, const PMString& post)
 	{
+		fLocator = locator; fLocator.SetTranslatable(kFalse);
 		fPre = pre;   fPre.SetTranslatable(kFalse);
 		fMatch = match; fMatch.SetTranslatable(kFalse);
 		fPost = post; fPost.SetTranslatable(kFalse);
 	}
 
-	virtual void GetSegments(PMString& outPre, PMString& outMatch, PMString& outPost) const
+	virtual void GetSegments(PMString& outLocator, PMString& outPre, PMString& outMatch, PMString& outPost) const
 	{
+		outLocator = fLocator;
 		outPre = fPre;
 		outMatch = fMatch;
 		outPost = fPost;
 	}
 
 private:
+	PMString fLocator;
 	PMString fPre;
 	PMString fMatch;
 	PMString fPost;
@@ -113,8 +116,8 @@ void KBSColorTextView::Draw(IViewPort* viewPort, SysRgn updateRgn)
 	if (data == nil)
 		return;
 
-	PMString pre, match, post;
-	data->GetSegments(pre, match, post);
+	PMString locator, pre, match, post;
+	data->GetSegments(locator, pre, match, post);
 
 	// The palette window's font (same one KESCL's report panel measures with).
 	InterfacePtr<IInterfaceFonts> fonts(GetExecutionContextSession(), UseDefaultIID());
@@ -144,11 +147,26 @@ void KBSColorTextView::Draw(IViewPort* viewPort, SysRgn updateRgn)
 		colors->GetRealAGMColor(kInterfacePaletteFill, bg);
 		colors->GetRealAGMColor(kInterfaceTextColor, fg);
 	}
-	const RealAGMColor kMatchColor = fg;								// the theme's text colour
+	const RealAGMColor kFullColor = fg;									// the theme's text colour
 	const RealAGMColor kContextColor = BlendColor(bg, fg, kContextTextWeight);	// faded toward bg
 
-	// Three runs, left to right. convertAmpersand=kFalse on draw AND measure. A run whose start
-	// is already past the cell's right edge is skipped (the earlier runs consumed the width).
+	// The page locator ("P1(2)") is drawn at the full theme text colour, then the line text
+	// starts at a tab stop (a fixed column from the cell's left edge, so the text lines up down
+	// the tree; a locator wider than the column just pushes the text past it with a min gap).
+	const PMReal kTextTabStop(48.0);	// px from the cell's left edge where the line text begins
+	const PMReal kMinGap(8.0);			// min space after an over-wide locator
+	if (!locator.IsEmpty() && x < rightEdge)
+	{
+		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), locator, fontInfo, kFullColor, kFalse, kFalse);
+		const PMReal locatorEnd = x + StringUtils::PMMeasureString(&gc, locator, fontInfo, kFalse).X();
+		x = frame.Left() + kTextTabStop;
+		if (locatorEnd + kMinGap > x)
+			x = locatorEnd + kMinGap;
+	}
+
+	// The line, left to right. convertAmpersand=kFalse on draw AND measure. A run whose start is
+	// already past the cell's right edge is skipped (the earlier runs consumed the width). The
+	// matched run is the full theme text colour; the context runs are faded.
 	if (!pre.IsEmpty() && x < rightEdge)
 	{
 		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), pre, fontInfo, kContextColor, kFalse, kFalse);
@@ -156,7 +174,7 @@ void KBSColorTextView::Draw(IViewPort* viewPort, SysRgn updateRgn)
 	}
 	if (!match.IsEmpty() && x < rightEdge)
 	{
-		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), match, fontInfo, kMatchColor, kFalse, kFalse);
+		StringUtils::PMDrawStringRGB(&gc, PMPoint(x, y), match, fontInfo, kFullColor, kFalse, kFalse);
 		x += StringUtils::PMMeasureString(&gc, match, fontInfo, kFalse).X();
 	}
 	if (!post.IsEmpty() && x < rightEdge)

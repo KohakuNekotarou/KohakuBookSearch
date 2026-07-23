@@ -64,7 +64,7 @@ bool KBSResultModel::GetChapterDisplay(int32 chapterIdx, PMString& outName, int3
 }
 
 bool KBSResultModel::GetHitDisplay(int32 chapterIdx, int32 hitIdx,
-	PMString& outPre, PMString& outMatch, PMString& outPost)
+	PMString& outLocator, PMString& outPre, PMString& outMatch, PMString& outPost)
 {
 	if (chapterIdx < 0 || chapterIdx >= static_cast<int32>(gChapters.size()))
 		return false;
@@ -72,6 +72,7 @@ bool KBSResultModel::GetHitDisplay(int32 chapterIdx, int32 hitIdx,
 	if (hitIdx < 0 || hitIdx >= static_cast<int32>(c.hits.size()))
 		return false;
 	const Hit& h = c.hits[hitIdx];
+	outLocator = h.locator;
 	outPre = h.preText;
 	outMatch = h.matchText;
 	outPost = h.postText;
